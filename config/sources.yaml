@@ -1,0 +1,6 @@
+# Define sources to scrape content from.
+# Add sources grouped by platform, specifying the url and the niche it belongs to.
+youtube:
+  sources:
+    - url: "https://www.youtube.com/@AI-thegioitihon"
+      niche: "stories"

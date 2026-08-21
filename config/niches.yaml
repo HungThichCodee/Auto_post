@@ -1,0 +1,16 @@
+niches:
+  stories:
+    name: "Truyện dài tập"
+    description: "Serialized stories with illustrative images"
+    tone: "narrative, engaging, suspenseful"
+    image_style: "digital art, fantasy illustration, cinematic lighting"
+  humor:
+    name: "Giải trí hài hước"
+    description: "Funny, entertaining content"
+    tone: "witty, playful, relatable"
+    image_style: "cartoon style, vibrant colors, funny scene"
+  health:
+    name: "Sức khỏe rau củ"
+    description: "Health content about vegetables, AI-generated imagery"
+    tone: "informative, caring, professional"
+    image_style: "photorealistic, fresh vegetables, healthy food photography, bright natural lighting"

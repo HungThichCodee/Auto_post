@@ -1,0 +1,34 @@
+# Environment and secrets
+.env
+
+# Generated images (but keep .gitkeep)
+output/*
+!output/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# Browser data
+cookies/
+.playwright/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (keep in repo for debugging, but ignore local ones)
+*.log

@@ -1,0 +1,158 @@
+# ============================================================================
+# Auto_post — Automated Social Media Content Pipeline
+# ============================================================================
+# This workflow runs the full pipeline: scrape → generate → post
+# on a randomized schedule (every 4-6 hours).
+#
+# Required GitHub Secrets:
+#   - GEMINI_API_KEY: Google AI Studio free API key
+#   - FB_COOKIES: Facebook session cookies (JSON string)
+#   - TIKTOK_COOKIES: TikTok session cookies (JSON string)
+#   - YT_COOKIES: YouTube session cookies (JSON string)
+#   - PROXY_LIST: (Optional) Comma-separated proxy URLs
+#   - FB_PAGE_URL: Facebook fanpage URL to post to
+#   - TIKTOK_UPLOAD_URL: TikTok upload page URL
+#   - YT_CHANNEL_URL: YouTube channel URL
+# ============================================================================
+
+name: Auto Post Pipeline
+
+on:
+  # Run every 4 hours (randomized delay added inside the job)
+  schedule:
+    - cron: '0 0,4,8,12,16,20 * * *'  # Every 4 hours
+  
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no actual posting)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      platforms:
+        description: 'Comma-separated platforms (leave empty for all)'
+        required: false
+        default: ''
+        type: string
+
+# Prevent concurrent runs
+concurrency:
+  group: auto-post-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write  # Needed to commit knowledge_base.md
+
+jobs:
+  auto-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ---- Random delay (0-120 min) for natural scheduling ----
+      - name: Random startup delay
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Random delay between 0 and 120 minutes (0-7200 seconds)
+            DELAY=$((RANDOM % 7200))
+            echo "⏰ Waiting ${DELAY} seconds ($(($DELAY / 60)) minutes) for random scheduling..."
+            sleep $DELAY
+          else
+            echo "⏭️ Manual trigger — skipping random delay"
+          fi
+
+      # ---- Checkout repository ----
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ---- Setup Python ----
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ---- Install dependencies ----
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ---- Install Playwright browsers ----
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      # ---- Create output directory ----
+      - name: Create output directory
+        run: mkdir -p output
+
+      # ---- Run the pipeline ----
+      - name: Run Auto_post pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FB_COOKIES: ${{ secrets.FB_COOKIES }}
+          TIKTOK_COOKIES: ${{ secrets.TIKTOK_COOKIES }}
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+          PROXY_LIST: ${{ secrets.PROXY_LIST }}
+          FB_PAGE_URL: ${{ secrets.FB_PAGE_URL }}
+          TIKTOK_UPLOAD_URL: ${{ secrets.TIKTOK_UPLOAD_URL }}
+          YT_CHANNEL_URL: ${{ secrets.YT_CHANNEL_URL }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Determine flags
+          DRY_RUN_FLAG=""
+          PLATFORMS_FLAG=""
+          
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+            echo "🏃 Running in DRY-RUN mode"
+          fi
+          
+          if [ -n "${{ github.event.inputs.platforms }}" ]; then
+            PLATFORMS_FLAG="--platforms ${{ github.event.inputs.platforms }}"
+          fi
+          
+          echo "🚀 Starting Auto_post pipeline..."
+          python -m src.main run $DRY_RUN_FLAG $PLATFORMS_FLAG
+
+      # ---- Commit updated knowledge base ----
+      - name: Commit knowledge base updates
+        run: |
+          git config --local user.email "auto-post-bot@github.com"
+          git config --local user.name "Auto Post Bot"
+          
+          # Check if knowledge_base.md has changes
+          if git diff --quiet knowledge_base.md; then
+            echo "📝 No changes to knowledge_base.md"
+          else
+            git add knowledge_base.md
+            git commit -m "📝 Update knowledge base — $(date +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "✅ Knowledge base committed and pushed"
+          fi
+
+      # ---- Upload logs as artifact (for debugging) ----
+      - name: Upload pipeline logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: |
+            output/auto_post.log
+          retention-days: 7
+
+      # ---- Cleanup generated images ----
+      - name: Cleanup output directory
+        if: always()
+        run: |
+          echo "🧹 Cleaning up generated images..."
+          rm -f output/*.png output/*.jpg
+          echo "✅ Cleanup complete"
