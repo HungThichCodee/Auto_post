@@ -1,72 +1,74 @@
-# 🚀 Auto_post — Automated Social Media Content Pipeline
+# 🎬 Auto_post — Tự động sản xuất & đăng Video Truyện Tranh lên YouTube
 
-Hệ thống tự động hóa hoàn toàn quy trình tạo và đăng nội dung lên mạng xã hội, chạy miễn phí trên GitHub Actions.
+Hệ thống AI tự động hóa hoàn toàn quy trình: **Cào dữ liệu → Viết kịch bản mới → Vẽ ảnh → Lồng tiếng → Ghép video → Upload YouTube**. Chạy miễn phí 100% trên GitHub Actions, đăng video mỗi 3-6 tiếng.
 
 ## 📋 Tổng quan
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    AUTO_POST PIPELINE                           │
-│                                                                 │
-│  📥 SCRAPE  →  🤖 AI REWRITE  →  🎨 GEN IMAGE  →  📤 POST    │
-│                                                                 │
-│  Facebook ─┐    Gemini AI       Pollinations.ai    Facebook     │
-│  TikTok  ──┤    (Free API)      (Free API)         TikTok      │
-│  YouTube ──┘                                       YouTube      │
-│                                                                 │
-│  📝 Knowledge Base (Long-term Memory)                          │
-│  ⏰ GitHub Actions (Auto-schedule every 4-6 hours)             │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                   AUTO VIDEO PIPELINE                              │
+│                                                                    │
+│  🕷️ SCRAPE → 🤖 AI SCRIPT → 🎨 IMAGES → 🔊 TTS → 🎬 VIDEO → 📤 │
+│                                                                    │
+│  YouTube ──→  Gemini 2.0    Pollinations  edge-tts  moviepy  YouTube│
+│  (nguồn)     (kịch bản)    (vẽ ảnh)     (giọng đọc) (ghép)  Studio│
+│                                                                    │
+│  📝 Knowledge Base (nhớ dài hạn, tránh lặp nội dung)             │
+│  ⏰ GitHub Actions (tự động mỗi 3-6 tiếng, random delay)          │
+│  💰 100% MIỄN PHÍ                                                 │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ## ✨ Tính năng
 
 | Tính năng | Mô tả |
 |-----------|--------|
-| 🕷️ **Multi-Platform Scraping** | Thu thập nội dung từ Facebook, TikTok, YouTube bằng Playwright |
-| 🛡️ **Anti-Detection** | Proxy rotation, fake user-agent, human-like behavior |
-| 🤖 **AI Content Rewriting** | Viết lại hoàn toàn bằng Gemini AI, giữ chủ đề, đổi góc nhìn |
-| 🎨 **AI Image Generation** | Tạo ảnh minh họa bằng Pollinations.ai (miễn phí) |
-| 🧠 **Long-term Memory** | Ghi nhớ lịch sử đăng bài, không lặp lại ý tưởng |
-| 📤 **Auto-Posting** | Đăng tự động lên 3 nền tảng bằng Playwright |
-| ⏰ **GitHub Actions** | Chạy tự động mỗi 4-6 tiếng, hoàn toàn miễn phí |
-| 🔒 **Bảo mật** | Tất cả secrets lưu trong GitHub Secrets |
+| 🕷️ **YouTube Scraping** | Cào nội dung video từ kênh YouTube bằng Playwright stealth |
+| 🛡️ **Anti-Detection** | Proxy rotation, fake user-agent, giả lập hành vi người thật |
+| 🤖 **AI Kịch bản đa cảnh** | Gemini 2.0 Flash viết lại thành kịch bản nhiều phân cảnh (Scene) |
+| 🎨 **AI Vẽ ảnh hàng loạt** | Pollinations.ai tạo ảnh cho từng cảnh, giữ phong cách nhất quán |
+| 🔊 **Lồng tiếng AI** | edge-tts giọng nam miền Nam tự nhiên (`vi-VN-NamMinhNeural`) |
+| 🎬 **Ghép video tự động** | moviepy + ffmpeg: Ken Burns effect + phụ đề tiếng Việt |
+| 📐 **Tự chọn định dạng** | Dưới 60s → YouTube Shorts (9:16) · Trên 60s → Video thường (16:9) |
+| 📤 **Upload YouTube** | Playwright tự động mở YouTube Studio, tải video, điền thông tin, đăng |
+| 🧠 **Nhớ dài hạn** | Ghi lịch sử đăng bài, AI không lặp lại chủ đề cũ |
+| ⏰ **Lịch 3-6 tiếng** | GitHub Actions cron + random delay, không cần bật máy |
+| 🔒 **Bảo mật** | API key & cookies lưu trong GitHub Secrets |
 
 ## 🏗️ Cấu trúc dự án
 
 ```
 Auto_post/
 ├── .github/workflows/
-│   └── auto_post.yml          # GitHub Actions cron workflow
+│   └── auto_post.yml              # GitHub Actions: cron + ffmpeg + random delay
 ├── config/
-│   ├── sources.yaml           # Danh sách URL nguồn scrape
-│   └── niches.yaml            # Cấu hình 3 niche nội dung
+│   ├── sources.yaml               # Kênh YouTube nguồn cần cào
+│   └── niches.yaml                # Cấu hình 3 niche: stories, humor, health
 ├── src/
-│   ├── main.py                # CLI entry point
-│   ├── scraper/               # Module thu thập dữ liệu
+│   ├── main.py                    # CLI entry point (scrape/generate/post/run)
+│   ├── models/
+│   │   └── pipeline_models.py     # Data models: Scene, StoryScript, VideoOutput
+│   ├── scraper/
 │   │   ├── base_scraper.py
-│   │   ├── facebook_scraper.py
-│   │   ├── tiktok_scraper.py
-│   │   └── youtube_scraper.py
-│   ├── ai_pipeline/           # Module AI sáng tạo nội dung
-│   │   ├── content_rewriter.py
-│   │   └── image_generator.py
-│   ├── memory/                # Module lưu trữ ngữ cảnh
-│   │   └── knowledge_base.py
-│   ├── poster/                # Module đăng bài tự động
-│   │   ├── base_poster.py
-│   │   ├── facebook_poster.py
-│   │   ├── tiktok_poster.py
-│   │   └── youtube_poster.py
-│   └── utils/                 # Tiện ích
-│       ├── browser_manager.py
-│       ├── human_simulator.py
-│       ├── logger.py
-│       └── proxy_manager.py
-├── knowledge_base.md          # File nhớ dài hạn
-├── output/                    # Ảnh AI tạm (gitignored)
+│   │   └── youtube_scraper.py     # Cào video titles & descriptions
+│   ├── ai_pipeline/
+│   │   ├── content_rewriter.py    # Gemini → kịch bản đa cảnh (StoryScript)
+│   │   ├── image_generator.py     # Pollinations.ai → ảnh từng cảnh
+│   │   ├── audio_generator.py     # edge-tts → giọng đọc AI
+│   │   └── video_maker.py         # moviepy → ghép video + phụ đề
+│   ├── memory/
+│   │   └── knowledge_base.py      # Đọc/ghi lịch sử nội dung
+│   ├── poster/
+│   │   └── youtube_poster.py      # Upload video lên YouTube Studio
+│   └── utils/
+│       ├── browser_manager.py     # Playwright stealth setup
+│       ├── human_simulator.py     # Giả lập chuột/bàn phím như người thật
+│       ├── logger.py              # Structured logging
+│       └── proxy_manager.py       # Xoay vòng proxy
+├── tests/                         # 117+ test cases (unit/integration/e2e)
+├── knowledge_base.md              # File nhớ dài hạn
 ├── requirements.txt
-├── .env.example               # Hướng dẫn cấu hình secrets
+├── .env.example
 └── .gitignore
 ```
 
@@ -75,7 +77,7 @@ Auto_post/
 ### Bước 1: Clone repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/Auto_post.git
+git clone https://github.com/HungThichCodee/Auto_post.git
 cd Auto_post
 ```
 
@@ -84,37 +86,35 @@ cd Auto_post
 ```bash
 # Tạo virtual environment (khuyến nghị)
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
+source venv/bin/activate    # Linux/Mac
 # hoặc
-.\venv\Scripts\activate  # Windows
+.\venv\Scripts\activate     # Windows
 
 # Cài đặt packages
 pip install -r requirements.txt
 
 # Cài đặt Playwright browsers
 playwright install chromium
+
+# Cài ffmpeg (bắt buộc cho video)
+# Ubuntu/Debian:
+sudo apt-get install -y ffmpeg fonts-noto-cjk
+# Windows: tải từ https://ffmpeg.org/download.html
+# Mac:
+brew install ffmpeg
 ```
 
 ### Bước 3: Lấy API keys & Cookies
 
 #### 🔑 Gemini API Key (miễn phí)
 1. Truy cập [Google AI Studio](https://aistudio.google.com/)
-2. Đăng nhập bằng tài khoản Google
-3. Vào **Get API Key** → **Create API Key**
-4. Copy API key
+2. Đăng nhập → **Get API Key** → **Create API Key**
+3. Copy API key
 
-#### 🍪 Lấy Cookies từ trình duyệt
-
-**Cách 1: Dùng extension (khuyến nghị)**
+#### 🍪 Lấy YouTube Cookies
 1. Cài extension [Cookie Editor](https://cookie-editor.com/) trên Chrome/Firefox
-2. Đăng nhập vào Facebook/TikTok/YouTube
-3. Mở Cookie Editor → **Export** → **JSON**
-4. Copy toàn bộ JSON string
-
-**Cách 2: Dùng DevTools**
-1. Đăng nhập vào trang web
-2. Mở DevTools (F12) → tab Application → Cookies
-3. Copy tất cả cookies thành JSON format
+2. Đăng nhập YouTube bằng tài khoản có kênh muốn đăng video
+3. Mở Cookie Editor → **Export** → Copy toàn bộ JSON
 
 ### Bước 4: Cấu hình GitHub Secrets
 
@@ -123,50 +123,34 @@ Vào **Settings** → **Secrets and variables** → **Actions** → **New reposi
 | Secret Name | Giá trị | Bắt buộc |
 |-------------|---------|----------|
 | `GEMINI_API_KEY` | API key từ Google AI Studio | ✅ |
-| `FB_COOKIES` | Facebook cookies (JSON string) | ✅ |
-| `TIKTOK_COOKIES` | TikTok cookies (JSON string) | ✅ |
 | `YT_COOKIES` | YouTube cookies (JSON string) | ✅ |
-| `FB_PAGE_URL` | URL fanpage Facebook của bạn | ✅ |
-| `TIKTOK_UPLOAD_URL` | URL trang upload TikTok | ⬜ |
-| `YT_CHANNEL_URL` | URL kênh YouTube của bạn | ⬜ |
-| `PROXY_LIST` | Danh sách proxy (comma-separated) | ⬜ |
+| `PROXY_LIST` | Danh sách proxy (comma-separated) | ⬜ Tùy chọn |
 
-### Bước 5: Cấu hình nguồn scrape
+### Bước 5: Cấu hình kênh nguồn
 
-Chỉnh sửa `config/sources.yaml` để thêm các trang/kênh muốn scrape:
+Chỉnh sửa `config/sources.yaml`:
 
 ```yaml
-facebook:
-  sources:
-    - url: "https://www.facebook.com/your.target.page"
-      niche: "humor"    # humor, stories, hoặc health
-    - url: "https://www.facebook.com/another.page"
-      niche: "health"
-
-tiktok:
-  sources:
-    - url: "https://www.tiktok.com/@target_account"
-      niche: "stories"
-
 youtube:
   sources:
-    - url: "https://www.youtube.com/@target_channel"
-      niche: "health"
+    # Kênh YouTube muốn cào nội dung làm nguồn cảm hứng
+    - url: "https://www.youtube.com/@AI-thegioitihon"
+      niche: "stories"    # stories, humor, hoặc health
 ```
 
 ### Bước 6: Test local
 
 ```bash
-# Test scraping (không lưu kết quả)
-python -m src.main scrape --platform facebook --dry-run
+# Test cào dữ liệu
+python -m src.main scrape --platform youtube
 
-# Test tạo nội dung AI (không tạo ảnh)
-python -m src.main generate --niche humor --dry-run
+# Test tạo kịch bản + ảnh + audio (không upload)
+python -m src.main generate --niche stories
 
-# Test toàn bộ pipeline (không đăng bài)
+# Test toàn bộ pipeline (không đăng video thật)
 python -m src.main run --dry-run
 
-# Chạy thật (sẽ đăng bài!)
+# Chạy thật (sẽ tạo video và đăng lên YouTube!)
 python -m src.main run
 ```
 
@@ -174,74 +158,94 @@ python -m src.main run
 
 1. Push code lên GitHub
 2. Vào tab **Actions** → Enable workflows
-3. Workflow sẽ tự chạy mỗi 4-6 tiếng
-4. Hoặc bấm **Run workflow** để chạy thủ công
+3. Bấm **Run workflow** để test thủ công
+4. Sau đó workflow sẽ tự chạy mỗi 3-6 tiếng
 
 ## 🎯 3 Niche nội dung
 
-| Niche | Mô tả | Phong cách ảnh |
-|-------|--------|----------------|
-| 🏰 **stories** | Truyện dài tập có minh họa | Digital art, fantasy, cinematic |
-| 😂 **humor** | Giải trí hài hước | Cartoon, vibrant colors, funny |
-| 🥬 **health** | Sức khỏe rau củ | Photorealistic, fresh vegetables |
+| Niche | Mô tả | Phong cách AI |
+|-------|--------|---------------|
+| 🏰 **stories** | Truyện dài tập, phiêu lưu kỳ thú | Kịch tính, hấp dẫn, có twist |
+| 😂 **humor** | Giải trí hài hước, video vui | Dí dỏm, gần gũi, trendy |
+| 🥬 **health** | Sức khỏe, rau củ, đời sống | Chuyên nghiệp, dễ hiểu |
 
 ## 📝 CLI Commands
 
 ```bash
-# Scrape nội dung
-python -m src.main scrape --platform facebook --max-posts 10
+# Cào nội dung từ YouTube
+python -m src.main scrape --platform youtube
 
-# Tạo nội dung AI
-python -m src.main generate --niche stories --platform tiktok
+# Tạo kịch bản + ảnh + audio
+python -m src.main generate --niche stories
 
-# Đăng bài
-python -m src.main post --platform facebook --content "Nội dung..." --image output/image.png
+# Upload video có sẵn
+python -m src.main post --video output/video.mp4 --title "Tiêu đề" --description "Mô tả"
 
 # Pipeline đầy đủ
-python -m src.main run                          # Tất cả platform
-python -m src.main run --platforms facebook      # Chỉ Facebook
-python -m src.main run --dry-run                 # Test không đăng
+python -m src.main run                # Scrape → AI → Video → Upload
+python -m src.main run --dry-run      # Test không upload thật
+```
+
+## 🔄 Quy trình tự động (Pipeline)
+
+```
+1. ⏰ GitHub Actions kích hoạt (cron mỗi 3h + random delay 0-180 phút)
+2. 🕷️ Playwright stealth cào nội dung từ kênh YouTube nguồn
+3. 🤖 Gemini AI viết kịch bản mới (khác nội dung gốc) → chia thành nhiều Scene
+4. 🎨 Pollinations.ai vẽ ảnh minh họa cho từng Scene
+5. 🔊 edge-tts đọc lời thuyết minh bằng giọng nam miền Nam
+6. 🎬 moviepy ghép ảnh + audio + phụ đề → xuất file .mp4
+7. 📐 Tự chọn format: < 60s → Shorts (9:16) | ≥ 60s → Video (16:9)
+8. 📤 Playwright mở YouTube Studio → upload video → đặt Public → Đăng
+9. 📝 Ghi lại nội dung vào knowledge_base.md → commit lên GitHub
+10. 🔁 Lặp lại sau 3-6 tiếng
 ```
 
 ## 🧠 Hệ thống nhớ (Knowledge Base)
 
 File `knowledge_base.md` tự động ghi lại:
 - 📅 Ngày đăng
-- 📱 Platform
-- 🏷️ Niche/chủ đề
-- 📝 Tóm tắt nội dung
-- 🔑 Các theme đã dùng
+- 🎬 Tiêu đề video
+- 🏷️ Chủ đề & themes
+- 📊 Số cảnh & thời lượng
 
-AI sẽ đọc toàn bộ lịch sử này trước khi tạo nội dung mới, đảm bảo:
-- ✅ Không lặp lại ý tưởng cũ
-- ✅ Duy trì văn phong nhất quán
-- ✅ Phát triển nội dung theo chiến lược
+AI đọc toàn bộ lịch sử trước khi tạo nội dung mới → đảm bảo:
+- ✅ Không lặp lại chủ đề/ý tưởng cũ
+- ✅ Mỗi video là một câu chuyện hoàn toàn mới
+- ✅ Phong cách nhất quán theo niche đã chọn
+
+## 🛠️ Công nghệ sử dụng (100% miễn phí)
+
+| Công nghệ | Mục đích | Chi phí |
+|------------|----------|---------|
+| [Playwright](https://playwright.dev/) | Browser automation (scrape + upload) | Miễn phí |
+| [Gemini 2.0 Flash](https://aistudio.google.com/) | Viết kịch bản AI | Miễn phí (free tier) |
+| [Pollinations.ai](https://pollinations.ai/) | Tạo ảnh AI | Miễn phí |
+| [edge-tts](https://github.com/rany2/edge-tts) | Giọng đọc AI tiếng Việt | Miễn phí |
+| [moviepy](https://zulko.github.io/moviepy/) | Ghép video | Miễn phí |
+| [GitHub Actions](https://github.com/features/actions) | Lịch chạy tự động | Miễn phí (public repo) |
 
 ## ⚠️ Lưu ý quan trọng
 
-> **🔒 Bảo mật**: TUYỆT ĐỐI KHÔNG commit cookies, API keys, hoặc bất kỳ dữ liệu nhạy cảm nào vào code. Luôn dùng GitHub Secrets.
+> **🔒 Bảo mật**: TUYỆT ĐỐI KHÔNG commit cookies, API keys vào code. Luôn dùng GitHub Secrets.
 
-> **🍪 Cookie hết hạn**: Cookies mạng xã hội có thời hạn (thường 30-90 ngày). Cần cập nhật lại cookies trong GitHub Secrets khi hết hạn.
+> **🍪 Cookie hết hạn**: Cookies YouTube có thời hạn (~30-90 ngày). Cần cập nhật lại khi hết hạn.
 
-> **⚖️ Pháp lý**: Tool này tạo nội dung GỐC được viết lại bằng AI, không sao chép. Tuy nhiên, hãy đảm bảo nội dung tuân thủ tiêu chuẩn cộng đồng của từng nền tảng.
+> **⚖️ Nội dung gốc**: Tool tạo nội dung MỚI được viết lại hoàn toàn bằng AI, không sao chép.
 
-> **💰 Chi phí**: Hoàn toàn MIỄN PHÍ — sử dụng Gemini Free API, Pollinations.ai free, và GitHub Actions free tier.
-
-## 📊 Giám sát
-
-- **GitHub Actions logs**: Tab Actions → chọn run → xem logs chi tiết
-- **Pipeline logs**: Tải artifact `pipeline-logs` từ mỗi run
-- **Knowledge base**: Kiểm tra `knowledge_base.md` để xem lịch sử đăng bài
+> **💰 Chi phí**: Hoàn toàn MIỄN PHÍ — tất cả API và dịch vụ đều dùng free tier.
 
 ## 🔧 Troubleshooting
 
 | Vấn đề | Giải pháp |
 |--------|-----------|
-| Cookie hết hạn | Lấy cookies mới và cập nhật GitHub Secrets |
-| Scraping bị block | Thêm proxy vào `PROXY_LIST` secret |
-| AI không tạo nội dung | Kiểm tra `GEMINI_API_KEY` còn hạn dùng |
-| Ảnh không tạo được | Pollinations.ai có thể chậm, retry tự động |
-| Đăng bài thất bại | Kiểm tra cookies và selectors (DOM có thể thay đổi) |
+| Cookie hết hạn | Lấy cookies mới, cập nhật GitHub Secrets |
+| Scraping bị chặn | Thêm proxy vào `PROXY_LIST` secret |
+| Gemini không phản hồi | Kiểm tra `GEMINI_API_KEY` còn hạn |
+| Ảnh không tạo được | Pollinations.ai đôi khi chậm, có retry tự động |
+| Video không render được | Kiểm tra ffmpeg đã cài chưa |
+| Upload YouTube thất bại | Kiểm tra cookies và giao diện YouTube Studio (DOM hay đổi) |
+| Subtitle không hiện | Cần cài ImageMagick (hoặc video sẽ không có phụ đề) |
 
 ## 📄 License
 
