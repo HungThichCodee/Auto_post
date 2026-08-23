@@ -10,7 +10,7 @@ edge-tts>=6.1.0
 # Video & Media Processing
 moviepy>=1.0.3,<2.0.0
 mutagen>=1.47.0
-Pillow>=10.0.0
+Pillow>=9.5.0,<10.0.0
 
 # Configuration & Utilities
 pyyaml>=6.0.1

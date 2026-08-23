@@ -10,6 +10,11 @@ import random
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+# Monkey-patch for PIL 10.0.0+ compatibility with moviepy 1.x
+import PIL
+if not hasattr(PIL.Image, 'ANTIALIAS'):
+    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+
 from src.models.pipeline_models import Scene, StoryScript, VideoOutput
 
 logger = logging.getLogger(__name__)
