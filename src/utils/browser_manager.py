@@ -81,6 +81,11 @@ class BrowserManager:
         if cookies_json:
             try:
                 cookies = json.loads(cookies_json)
+                # Fix sameSite values for Playwright
+                for cookie in cookies:
+                    if 'sameSite' in cookie:
+                        if cookie['sameSite'] and cookie['sameSite'].lower() == 'no_restriction':
+                            cookie['sameSite'] = 'None'
                 await context.add_cookies(cookies)
                 logger.info("Injected cookies into context.")
             except Exception as e:
