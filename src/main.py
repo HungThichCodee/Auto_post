@@ -208,9 +208,9 @@ async def cmd_post(args=None, video_path: str = "", title: str = "",
         logger.error(f"Video file not found: {video_path}")
         return None
 
-    cookies_json = os.getenv("YT_COOKIES")
-    if not cookies_json and not dry_run:
-        logger.error("YT_COOKIES not set — cannot upload without authentication")
+    client_id = os.getenv("YT_CLIENT_ID")
+    if not client_id and not dry_run:
+        logger.error("YT_CLIENT_ID not set — cannot upload without API authentication")
         return None
 
     proxy_manager = ProxyManager(os.getenv("PROXY_LIST"))
@@ -218,7 +218,7 @@ async def cmd_post(args=None, video_path: str = "", title: str = "",
 
     try:
         await browser_manager.launch(headless=True)
-        poster = YoutubePoster(browser_manager, cookies_json=cookies_json)
+        poster = YoutubePoster(browser_manager, cookies_json=None)
 
         result = await poster.upload_video(
             video_path=video_path,
