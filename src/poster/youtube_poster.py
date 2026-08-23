@@ -126,118 +126,82 @@ class YoutubePoster(BasePoster):
 
             # Step 5: Fill in Title
             self.logger.info(f"Setting title: {title[:50]}...")
-            title_selectors = [
-                "#textbox[aria-label*='title' i]",
-                "#textbox[aria-label*='tiêu đề' i]",
-                "div#textbox.ytcp-social-suggestions-textbox",
-                "#title-textarea #textbox",
-                "ytcp-social-suggestions-textbox #textbox",
-            ]
-            title_filled = False
-            for selector in title_selectors:
-                try:
-                    title_el = await self.page.wait_for_selector(selector, timeout=5000)
-                    if title_el:
-                        # Clear existing title
-                        await title_el.click()
-                        await self.page.keyboard.press("Control+A")
-                        await self.page.keyboard.press("Backspace")
-                        await self.simulator.random_delay(0.5, 1.0)
-                        # Type new title
-                        await title_el.fill(title[:100])
-                        title_filled = True
-                        self.logger.info("Title set successfully")
-                        break
-                except Exception:
-                    continue
-
-            if not title_filled:
-                self.logger.warning("Could not find title field, trying keyboard shortcut...")
-                try:
-                    await self.page.keyboard.press("Tab")
-                    await self.page.keyboard.type(title[:100], delay=30)
-                except Exception as e:
-                    self.logger.warning(f"Title fill fallback failed: {e}")
+            try:
+                # Wait for the upload modal to appear
+                await self.page.wait_for_selector("ytcp-uploads-dialog", state="visible", timeout=30000)
+                await self.simulator.random_delay(2.0, 3.0)
+                
+                title_el = self.page.locator("#title-textarea #textbox").first
+                await title_el.click(timeout=5000)
+                await self.page.keyboard.press("Control+A")
+                await self.page.keyboard.press("Backspace")
+                await self.simulator.random_delay(0.5, 1.0)
+                await self.page.keyboard.insert_text(title[:100])
+                self.logger.info("Title set successfully")
+            except Exception as e:
+                self.logger.warning(f"Could not set title: {e}")
 
             await self.simulator.random_delay(1.0, 2.0)
 
             # Step 6: Fill in Description
             self.logger.info("Setting description...")
-            desc_selectors = [
-                "#description-textarea #textbox",
-                "#textbox[aria-label*='description' i]",
-                "#textbox[aria-label*='mô tả' i]",
-                "div#description-wrapper #textbox",
-            ]
-            for selector in desc_selectors:
-                try:
-                    desc_el = await self.page.wait_for_selector(selector, timeout=3000)
-                    if desc_el:
-                        await desc_el.click()
-                        await desc_el.fill(description[:5000])
-                        self.logger.info("Description set successfully")
-                        break
-                except Exception:
-                    continue
+            try:
+                desc_el = self.page.locator("#description-textarea #textbox").first
+                await desc_el.click(timeout=5000)
+                await self.page.keyboard.press("Control+A")
+                await self.page.keyboard.press("Backspace")
+                await self.simulator.random_delay(0.5, 1.0)
+                await self.page.keyboard.insert_text(description[:5000])
+                self.logger.info("Description set successfully")
+            except Exception as e:
+                self.logger.warning(f"Could not set description: {e}")
 
             await self.simulator.random_delay(1.0, 2.0)
 
             # Step 7: Select "Not made for kids"
             self.logger.info("Selecting 'Not made for kids'...")
-            not_for_kids_selectors = [
-                "#audience tp-yt-paper-radio-button[name='NOT_MADE_FOR_KIDS']",
-                "tp-yt-paper-radio-button[name='NOT_MADE_FOR_KIDS']",
-                "#radioLabel:has-text('not made for kids')",
-                "#radioLabel:has-text('không dành cho trẻ em')",
-                "tp-yt-paper-radio-button:nth-child(2)",
-            ]
-            await self._try_click_selectors(not_for_kids_selectors)
+            try:
+                # The 'Not made for kids' radio button
+                kids_radio = self.page.locator("tp-yt-paper-radio-button[name='NOT_MADE_FOR_KIDS']").first
+                await kids_radio.click(timeout=5000)
+                self.logger.info("Selected not for kids")
+            except Exception as e:
+                self.logger.warning(f"Could not select not for kids: {e}")
+
             await self.simulator.random_delay(1.0, 2.0)
 
             # Step 8: Click Next through remaining steps (3 times)
             self.logger.info("Clicking through Next steps...")
-            next_selectors = [
-                "#next-button",
-                "ytcp-button#next-button",
-                "#step-badge-3",
-            ]
             for step in range(3):
                 await self.simulator.random_delay(1.5, 3.0)
-                for selector in next_selectors:
-                    try:
-                        btn = await self.page.wait_for_selector(selector, timeout=5000)
-                        if btn:
-                            await btn.click()
-                            self.logger.info(f"Clicked Next (step {step + 1}/3)")
-                            break
-                    except Exception:
-                        continue
-                await self.simulator.random_delay(1.0, 2.0)
+                try:
+                    next_btn = self.page.locator("#next-button").first
+                    await next_btn.click(timeout=5000)
+                    self.logger.info(f"Clicked Next (step {step + 1}/3)")
+                except Exception as e:
+                    self.logger.warning(f"Could not click Next step {step+1}: {e}")
+
+            await self.simulator.random_delay(1.0, 2.0)
 
             # Step 9: Select Public visibility
             self.logger.info("Setting visibility to Public...")
-            public_selectors = [
-                "tp-yt-paper-radio-button[name='PUBLIC']",
-                "#privacy-radios tp-yt-paper-radio-button:first-child",
-                "#radioLabel:has-text('Public')",
-                "#radioLabel:has-text('Công khai')",
-            ]
-            await self._try_click_selectors(public_selectors)
+            try:
+                public_radio = self.page.locator("tp-yt-paper-radio-button[name='PUBLIC']").first
+                await public_radio.click(timeout=5000)
+                self.logger.info("Selected Public visibility")
+            except Exception as e:
+                self.logger.warning(f"Could not set Public visibility: {e}")
+                
             await self.simulator.random_delay(1.5, 3.0)
 
             # Step 10: Click Publish/Done
             self.logger.info("Publishing video...")
-            publish_selectors = [
-                "#done-button",
-                "ytcp-button#done-button",
-                "ytcp-button:has-text('Publish')",
-                "ytcp-button:has-text('Xuất bản')",
-                "ytcp-button:has-text('Done')",
-                "ytcp-button:has-text('Xong')",
-            ]
-            published = await self._try_click_selectors(publish_selectors)
-            if not published:
-                return PostResult(False, "YouTube", error="Could not find Publish/Done button")
+            try:
+                publish_btn = self.page.locator("#done-button").first
+                await publish_btn.click(timeout=5000)
+                self.logger.info("Clicked Publish button")
+            except Exception as e:
+                return PostResult(False, "YouTube", error=f"Could not find Publish/Done button: {e}")
 
             # Step 11: Wait for confirmation
             self.logger.info("Waiting for upload confirmation...")
