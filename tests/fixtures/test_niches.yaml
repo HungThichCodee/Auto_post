@@ -1,0 +1,27 @@
+# Test niches configuration
+niches:
+  stories:
+    name: "stories"
+    description: "Multi-scene dramatic storytelling and fairy tales with meaningful life lessons."
+    tone: "emotional, dramatic, engaging"
+    image_style: "cute 3D Pixar animation style, vibrant lighting, highly detailed"
+  humor:
+    name: "humor"
+    description: "Funny animal stories, relatable moments, and humorous daily life gags."
+    tone: "hilarious, lighthearted, witty"
+    image_style: "vibrant comic gag style, expressive characters, bright colors"
+  health:
+    name: "health"
+    description: "Nutritional benefits of vegetables, herbal remedies, and daily wellness tips."
+    tone: "informative, scientific, trustworthy"
+    image_style: "clean photorealistic style, fresh ingredients, 8k crisp focus"
+  science:
+    name: "science"
+    description: "Space exploration, astronomy facts, and cosmic mysteries."
+    tone: "awe-inspiring, educational, epic"
+    image_style: "epic cinematic sci-fi space style, nebula glowing, photorealistic"
+  mythology:
+    name: "mythology"
+    description: "Ancient folk legends, mythical creatures, and heroic journeys."
+    tone: "mystical, legendary, profound"
+    image_style: "traditional Vietnamese mythological lacquer painting style, rich gold and crimson"

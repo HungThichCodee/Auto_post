@@ -30,5 +30,8 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Teamwork agent internal files
+.agents/
+
 # Logs (keep in repo for debugging, but ignore local ones)
 *.log

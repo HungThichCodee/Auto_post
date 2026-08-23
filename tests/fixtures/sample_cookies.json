@@ -1,0 +1,78 @@
+{
+  "valid_yt_cookies": [
+    {
+      "name": "SSID",
+      "value": "AP_valid_ssid_test_token_1234567890",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1893456000,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SID",
+      "value": "AP_valid_sid_test_token_1234567890",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1893456000,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "HSID",
+      "value": "AP_valid_hsid_test_token_1234567890",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1893456000,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "LOGIN_INFO",
+      "value": "AP_valid_login_info_test_token_1234567890",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1893456000,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "SAPISID",
+      "value": "AP_valid_sapisid_test_token_1234567890",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1893456000,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "expired_yt_cookies": [
+    {
+      "name": "SSID",
+      "value": "AP_expired_ssid_token",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1577836800,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "LOGIN_INFO",
+      "value": "AP_expired_login_token",
+      "domain": ".youtube.com",
+      "path": "/",
+      "expires": 1577836800,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "empty_cookies": [],
+  "malformed_cookies_string": "{invalid json: [missing_quotes}"
+}

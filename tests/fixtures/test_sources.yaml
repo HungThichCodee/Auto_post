@@ -1,0 +1,11 @@
+# Test sources configuration
+youtube:
+  channel_name: "DogCat002"
+  channel_url: "https://www.youtube.com/@DogCat002"
+  sources:
+    - url: "https://www.youtube.com/@AI-thegioitihon"
+      niche: "stories"
+    - url: "https://www.youtube.com/@AI-truyenhay3d"
+      niche: "stories"
+    - url: "https://www.youtube.com/@AI-funny-pets"
+      niche: "humor"

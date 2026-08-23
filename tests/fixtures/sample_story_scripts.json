@@ -1,0 +1,181 @@
+{
+  "valid_3_scenes_shorts": {
+    "title_vi": "Hành Trình Chú Kiến Dũng Cảm Vượt Giông Bão",
+    "description_vi": "Khám phá câu chuyện hoạt hình 3D kỳ thú về lòng dũng cảm của chú kiến nhỏ trong khu vườn tí hon. #thegioitihon #hoathinh3d #shorts",
+    "theme": "Thế giới côn trùng tí hon",
+    "art_style": "cute 3D Pixar animation style, vibrant lighting, soft colors, high detail",
+    "character_style": "Tiny brave brown ant with blue backpack and big curious hazel eyes",
+    "niche": "stories",
+    "summary": "Chú kiến nhỏ dũng cảm tìm đường về tổ qua cơn mưa bão lớn.",
+    "themes": ["kiến", "lòng dũng cảm", "khu vườn tí hon", "phiêu lưu"],
+    "scenes": [
+      {
+        "scene_id": 1,
+        "narration_text_vi": "Trong một khu vườn ngập tràn ánh nắng ban mai, chú kiến nhỏ bắt đầu chuyến phiêu lưu kỳ thú của mình.",
+        "image_prompt_en": "A tiny cute ant with a blue backpack walking happily on a giant green leaf in a sunny garden, 3D Pixar animation style, warm morning light",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 2,
+        "narration_text_vi": "Bỗng nhiên một cơn mưa rào đổ ập xuống, từng giọt nước khổng lồ biến mặt đất thành dòng sông cuộn sóng.",
+        "image_prompt_en": "Giant raindrops splashing around a surprised tiny ant sheltering under a mushroom in a rainy garden, dramatic lighting, 3D Pixar animation style",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 3,
+        "narration_text_vi": "Bằng sự thông minh và lòng dũng cảm, chú kiến đã dùng chiếc lá làm thuyền buồm để trở về tổ an toàn.",
+        "image_prompt_en": "A brave tiny ant sailing a floating green leaf like a boat across a puddle towards a warm glowing anthill, 3D Pixar animation style, sunset golden hour",
+        "duration": 15.0,
+        "status": "pending"
+      }
+    ]
+  },
+  "valid_5_scenes_regular": {
+    "title_vi": "Huyền Thoại Vùng Đất Rồng Thiêng: Cuộc Phiêu Lưu Của Kaito",
+    "description_vi": "Một anime phiêu lưu kỳ ảo đưa bạn bước vào hành trình thức tỉnh rồng thần cổ đại. Đón xem cuộc hành trình kỳ vĩ!",
+    "theme": "Anime kỳ ảo rồng thần",
+    "art_style": "Makoto Shinkai anime style, vibrant sky, cinematic clouds, highly detailed digital painting",
+    "character_style": "Young anime boy named Kaito with dark blue hair, adventurous white tunic, and a glowing magical amulet",
+    "niche": "stories",
+    "summary": "Cậu bé Kaito khám phá tàn tích rồng thiêng trên đỉnh núi mây.",
+    "themes": ["anime", "rồng thiêng", "kỳ ảo", "phiêu lưu"],
+    "scenes": [
+      {
+        "scene_id": 1,
+        "narration_text_vi": "Trên đỉnh núi mờ sương nơi trần thế tiếp giáp mây trời, Kaito tìm thấy tấm bản đồ dẫn lối tới đền rồng cổ đại.",
+        "image_prompt_en": "Anime boy with blue hair standing on a high misty mountain cliff holding an ancient glowing map, Makoto Shinkai style, breathtaking sky",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 2,
+        "narration_text_vi": "Con đường vượt qua rừng pha lê chứa đầy những cạm bẫy ma thuật và những sinh vật phát sáng bí ẩn.",
+        "image_prompt_en": "Glowing crystal forest with magical bioluminescent flora and ethereal spirits surrounding an anime boy, Makoto Shinkai style",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 3,
+        "narration_text_vi": "Khi chiếc bùa hộ mệnh trên cổ cậu phát sáng rực rỡ, cánh cổng phong ấn ngàn năm từ từ hé mở.",
+        "image_prompt_en": "An enormous ancient stone gate adorned with dragon carvings opening with golden light beams, anime boy holding glowing amulet, cinematic anime",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 4,
+        "narration_text_vi": "Từ trong biển mây cuồn cuộn, thần rồng vĩ đại xuất hiện với đôi cánh vàng óng ánh như vầng thái dương.",
+        "image_prompt_en": "Majestic celestial dragon with golden shimmering scales emerging from sea of swirling clouds, anime cinematic lighting, Makoto Shinkai style",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 5,
+        "narration_text_vi": "Một giao ước mới được thiết lập, mở ra kỷ nguyên hòa bình rạng ngời cho toàn cõi nhân gian.",
+        "image_prompt_en": "Anime boy and giant benevolent dragon looking at a sprawling utopian kingdom under a brilliant sunrise, vibrant colors, emotional masterpiece",
+        "duration": 15.0,
+        "status": "pending"
+      }
+    ]
+  },
+  "boundary_59_9s": {
+    "title_vi": "Bí Mật Dưới Lòng Đại Dương Tí Hon (Shorts 59.9s)",
+    "description_vi": "Video chuẩn thời lượng YouTube Shorts dưới 60 giây.",
+    "theme": "Đại dương tí hon",
+    "art_style": "3D Pixar underwater style",
+    "character_style": "Cute baby clownfish with goggles",
+    "niche": "stories",
+    "summary": "Shorts 59.9s test case.",
+    "themes": ["đại dương", "shorts", "59.9s"],
+    "scenes": [
+      {
+        "scene_id": 1,
+        "narration_text_vi": "Dưới rạn san hô lấp lánh, chú cá hề nhỏ đeo kính lặn chuẩn bị cho chuyến thám hiểm rãnh vực sâu.",
+        "image_prompt_en": "Cute baby clownfish with tiny goggles swimming in colorful vibrant coral reef, 3D Pixar style",
+        "duration": 19.9,
+        "status": "pending"
+      },
+      {
+        "scene_id": 2,
+        "narration_text_vi": "Chú bắt gặp một vỏ sò phát ra ánh sáng lung linh như viên ngọc ước của đại dương.",
+        "image_prompt_en": "Glowing giant oyster shell opening with magical iridescent pearl underwater, 3D Pixar style",
+        "duration": 20.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 3,
+        "narration_text_vi": "Món quà của biển cả giúp toàn bộ rạn san hô bừng sáng trong đêm tối vĩnh hằng.",
+        "image_prompt_en": "Entire ocean coral reef illuminated with bioluminescent sparkling light, 3D Pixar style",
+        "duration": 20.0,
+        "status": "pending"
+      }
+    ]
+  },
+  "boundary_60_1s": {
+    "title_vi": "Bí Mật Dưới Lòng Đại Dương Tí Hon (Regular 60.1s)",
+    "description_vi": "Video chuẩn thời lượng Regular Video ngang 16:9 trên 60 giây.",
+    "theme": "Đại dương tí hon",
+    "art_style": "3D Pixar underwater style",
+    "character_style": "Cute baby clownfish with goggles",
+    "niche": "stories",
+    "summary": "Regular 60.1s test case.",
+    "themes": ["đại dương", "regular", "60.1s"],
+    "scenes": [
+      {
+        "scene_id": 1,
+        "narration_text_vi": "Dưới rạn san hô lấp lánh, chú cá hề nhỏ chuẩn bị cho chuyến thám hiểm rãnh vực sâu thẳm.",
+        "image_prompt_en": "Cute baby clownfish swimming in colorful vibrant coral reef, 3D Pixar style",
+        "duration": 20.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 2,
+        "narration_text_vi": "Chú lặn sâu qua từng tầng nước xanh biếc nơi ánh mặt trời dần nhường chỗ cho bóng tối huyền bí.",
+        "image_prompt_en": "Deep ocean trench with rays of sunlight filtering down through deep blue water, 3D Pixar style",
+        "duration": 20.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 3,
+        "narration_text_vi": "Tại đây chú phát hiện ra một vỏ sò cổ xưa phát ra ánh sáng lấp lánh kỳ diệu.",
+        "image_prompt_en": "Glowing giant oyster shell opening with magical iridescent pearl underwater, 3D Pixar style",
+        "duration": 20.1,
+        "status": "pending"
+      }
+    ]
+  },
+  "heavy_diacritics_script": {
+    "title_vi": "Thuở Ấy Xứ Sở Quằn Quại Trong Cơn Giông Bão Sừng Sững",
+    "description_vi": "Kiểm thử toàn bộ hệ thống ký tự tiếng Việt với dấu thanh phức tạp: ắ, ằ, ẳ, ẵ, ặ, ế, ề, ể, ễ, ệ, ố, ồ, ổ, ỗ, ộ, ư, ứ, ừ, ử, ữ, ự, ý, ỳ, ỷ, ỹ, ỵ, đ.",
+    "theme": "Thần thoại tiếng Việt cổ",
+    "art_style": "Vietnamese mythological lacquer painting style, deep gold and crimson",
+    "character_style": "Thần Rùa Vàng Kim Quy trong truyền thuyết với mai rùa dát ngọc",
+    "niche": "stories",
+    "summary": "Kiểm thử phụ đề tiếng Việt chuẩn xác tuyệt đối.",
+    "themes": ["tiếng việt", "dấu thanh", "thần thoại", "kim quy"],
+    "scenes": [
+      {
+        "scene_id": 1,
+        "narration_text_vi": "Thuở khai thiên lập địa, xứ sở quằn quại trong muôn vàn trắc trở, ngọn núi sừng sững khuất tất sau ngàn lớp mây mù.",
+        "image_prompt_en": "Ancient Vietnamese mystical mountain range surrounded by stormy crimson clouds, traditional lacquer painting style",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 2,
+        "narration_text_vi": "Cụ rùa vàng Kim Quy từ đáy hồ sâu ngoi lên, trao thanh bảo kiếm mang linh khí đất trời rực rỡ.",
+        "image_prompt_en": "Golden mystical giant turtle emerging from misty lake holding a radiant divine sword, Vietnamese lacquer art style",
+        "duration": 15.0,
+        "status": "pending"
+      },
+      {
+        "scene_id": 3,
+        "narration_text_vi": "Nhờ đó muôn dân thoát khỏi cảnh lầm than, cùng nhau xây dựng nên một giang sơn gấm vóc đời đời bền vững.",
+        "image_prompt_en": "Prosperous ancient Vietnamese ancient village under clear golden sunrise, celebratory villagers, traditional painting style",
+        "duration": 15.0,
+        "status": "pending"
+      }
+    ]
+  }
+}
