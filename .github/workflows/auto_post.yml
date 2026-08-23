@@ -16,6 +16,8 @@ jobs:
   auto-post:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -68,5 +70,4 @@ jobs:
           git config user.name "Auto Post Bot"
           git config user.email "bot@auto-post.local"
           git add knowledge_base.md
-          git diff --staged --quiet || git commit -m "📝 Update knowledge base — $(date '+%Y-%m-%d %H:%M')"
-          git push
+          git diff --staged --quiet || (git commit -m "📝 Update knowledge base — $(date '+%Y-%m-%d %H:%M')" && git push)
