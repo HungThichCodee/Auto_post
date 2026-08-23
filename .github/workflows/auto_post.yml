@@ -9,7 +9,9 @@ on:
 
 # Secrets required:
 #   - GEMINI_API_KEY: Google AI Studio free API key
-#   - YT_COOKIES: YouTube session cookies as JSON string
+#   - YT_CLIENT_ID: YouTube Data API Client ID
+#   - YT_CLIENT_SECRET: YouTube Data API Client Secret
+#   - YT_REFRESH_TOKEN: YouTube Data API Refresh Token
 #   - PROXY_LIST: (Optional) Comma-separated proxy URLs
 
 jobs:
@@ -55,7 +57,9 @@ jobs:
       - name: Run video pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           PROXY_LIST: ${{ secrets.PROXY_LIST }}
         run: |
           python -m src.main run
