@@ -40,6 +40,7 @@ jobs:
           playwright install-deps
 
       - name: Random delay (0-180 minutes for 3-6hr randomization)
+        if: github.event_name == 'schedule'
         run: |
           DELAY=$((RANDOM % 10800))
           echo "Sleeping for $DELAY seconds ($((DELAY / 60)) minutes)..."
