@@ -144,7 +144,7 @@ class ImageGenerator:
 
                 url = (
                     f"{self.BASE_URL}{encoded_prompt}"
-                    f"?width={width}&height={height}&model={current_model}&nologo=true&enhance=false"
+                    f"?width={width}&height={height}&model={current_model}&nologo=true&enhance=true"
                 )
                 if current_seed is not None:
                     url += f"&seed={current_seed}"

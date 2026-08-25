@@ -97,10 +97,11 @@ class VideoMaker:
         await asyncio.to_thread(
             final.write_videofile,
             str(out_path),
-            fps=24,
+            fps=30,
             codec="libx264",
             audio_codec="aac",
             preset="medium",
+            bitrate="8000k",
             threads=2,
             logger=None,  # Suppress moviepy's verbose output
         )

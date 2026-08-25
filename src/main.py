@@ -134,10 +134,18 @@ async def cmd_generate(args, scraped_text: str = ""):
 
     # Step 1: Generate story script
     log_step(logger, "AI REWRITE", "Generating multi-scene story...")
+    import random
+    video_format = random.choice(["shorts", "video"])
+    visual_style = random.choice(["2d_animation", "painting"])
+    
+    logger.info(f"Selected format: {video_format}, visual style: {visual_style}")
+
     story = await rewriter.rewrite_story(
         scraped_text=scraped_text,
         niche=niche,
         past_themes=past_themes,
+        video_format=video_format,
+        visual_style=visual_style,
     )
     logger.info(f"Story: '{story.title_vi}' with {story.scene_count} scenes")
 
@@ -310,9 +318,11 @@ async def cmd_run(args):
             f"**URL:** {upload_result.post_url}\n"
         )
         kb.append_entry(
-            title=story.title_vi,
-            content=entry_content,
+            platform="youtube",
+            niche=story.theme or "stories",
+            content_summary=story.title_vi,
             themes=story.themes,
+            post_url=upload_result.post_url if upload_result else ""
         )
         logger.info("Knowledge base updated.")
     elif args.dry_run:

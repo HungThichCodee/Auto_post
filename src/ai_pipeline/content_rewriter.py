@@ -60,6 +60,8 @@ class ContentRewriter:
         scraped_text: str,
         niche: str = "stories",
         past_themes: Optional[List[str]] = None,
+        video_format: str = "random",
+        visual_style: str = "random",
     ) -> StoryScript:
         """
         Transform raw scraped video text into a structured multi-scene StoryScript.
@@ -68,6 +70,8 @@ class ContentRewriter:
             scraped_text: Raw text content from scraped video(s).
             niche: Target content niche (e.g., 'stories', 'humor', 'health').
             past_themes: List of recent themes to avoid duplicating.
+            video_format: 'shorts', 'video', or 'random'.
+            visual_style: '2d_animation', 'painting', or 'random'.
 
         Returns:
             StoryScript instance containing scenes and visual metadata.
@@ -79,7 +83,7 @@ class ContentRewriter:
         if past_themes is None:
             past_themes = self.extract_past_themes_from_file()
 
-        system_prompt = self._build_story_system_prompt(niche)
+        system_prompt = self._build_story_system_prompt(niche, video_format, visual_style)
         user_prompt = self._build_story_user_prompt(scraped_text, past_themes)
         full_prompt = f"System Instructions:\n{system_prompt}\n\nUser Request:\n{user_prompt}"
 
@@ -97,8 +101,22 @@ class ContentRewriter:
             logger.error(f"Error during Gemini story rewriting: {e}")
             return self._create_fallback_story(scraped_text, niche)
 
-    def _build_story_system_prompt(self, niche: str) -> str:
+    def _build_story_system_prompt(self, niche: str, video_format: str, visual_style: str) -> str:
         """Construct system instructions enforcing multi-scene JSON format, art style, and character consistency."""
+        if video_format == "shorts":
+            format_instruction = "Structure the story strictly into 3 to 4 sequential SCENES to make a short vertical video (~45s)."
+        elif video_format == "video":
+            format_instruction = "Structure the story strictly into 7 to 8 sequential SCENES to make a standard horizontal video (~90s)."
+        else:
+            format_instruction = "Structure the story into 3 to 8 sequential SCENES."
+
+        if visual_style == "2d_animation":
+            style_instruction = "Define an overarching 'art_style' as 'high quality 2D anime animation style, Studio Ghibli style, vibrant colors'."
+        elif visual_style == "painting":
+            style_instruction = "Define an overarching 'art_style' as 'beautiful watercolor painting, artistic brush strokes, storybook illustration'."
+        else:
+            style_instruction = "Define an overarching 'art_style' (e.g., 'cute 3D Pixar animation style' or 'watercolor painting')."
+
         prompt = (
             "You are an elite viral YouTube creator, animator scriptwriter, and creative visual director.\n"
             "Your task is to transform source material into an original, engaging multi-scene video script.\n\n"
@@ -108,12 +126,12 @@ class ContentRewriter:
             "   - 'art_style', 'character_style', and all 'image_prompt_en' MUST be in ENGLISH.\n"
             "2. ORIGINALITY & ADAPTATION:\n"
             "   - Create an entirely NEW story/script on the same broad theme. Do NOT copy the source text verbatim.\n"
-            "   - Structure the story into 3 to 6 sequential SCENES (3 scenes for shorts ~45s, 4-6 scenes for regular videos ~60-90s).\n"
+            f"   - {format_instruction}\n"
             "3. SCENE BREAKDOWN:\n"
             "   - Each scene must have a natural Vietnamese voiceover narration ('narration_text_vi') designed for spoken audio.\n"
             "   - Each scene must have a detailed English image prompt ('image_prompt_en') describing visual composition, character action, and setting.\n"
             "4. VISUAL & CHARACTER CONSISTENCY:\n"
-            "   - Define an overarching 'art_style' (e.g., 'cute 3D Pixar animation style, vibrant lighting, soft colors, high detail').\n"
+            f"   - {style_instruction}\n"
             "   - Define a detailed 'character_style' establishing the protagonist's recurring visual traits (species, colors, clothing, eyes).\n"
             "   - Incorporate the character description and art style into every scene's 'image_prompt_en' to maintain visual continuity.\n"
             "5. OUTPUT FORMAT:\n"
