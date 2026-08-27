@@ -103,54 +103,136 @@ class ContentRewriter:
 
     def _build_story_system_prompt(self, niche: str, video_format: str, visual_style: str) -> str:
         """Construct system instructions enforcing multi-scene JSON format, art style, and character consistency."""
-        if video_format == "shorts":
-            format_instruction = "Structure the story strictly into 3 to 4 sequential SCENES to make a short vertical video (~45s)."
-        elif video_format == "video":
-            format_instruction = "Structure the story strictly into 7 to 8 sequential SCENES to make a standard horizontal video (~90s)."
-        else:
-            format_instruction = "Structure the story into 3 to 8 sequential SCENES."
+        format_mapping = {
+            "shorts": "9:16",
+            "video": "16:9",
+        }
+        vf = format_mapping.get(video_format, "9:16")
 
-        if visual_style == "2d_animation":
-            style_instruction = "Define an overarching 'art_style' as 'high quality 2D anime animation style, Studio Ghibli style, vibrant colors'."
-        elif visual_style == "painting":
-            style_instruction = "Define an overarching 'art_style' as 'beautiful watercolor painting, artistic brush strokes, storybook illustration'."
-        else:
-            style_instruction = "Define an overarching 'art_style' (e.g., 'cute 3D Pixar animation style' or 'watercolor painting')."
+        style_mapping = {
+            "2d_animation": "high quality 2D anime animation style, Studio Ghibli style, vibrant colors",
+            "painting": "beautiful watercolor painting, artistic brush strokes, storybook illustration"
+        }
+        vs = style_mapping.get(visual_style, "cute 3D Pixar animation style, vibrant lighting, soft colors, high detail")
 
         prompt = (
-            "You are an elite viral YouTube creator, animator scriptwriter, and creative visual director.\n"
-            "Your task is to transform source material into an original, engaging multi-scene video script.\n\n"
-            "CRITICAL INSTRUCTIONS:\n"
-            "1. LANGUAGE RULES:\n"
-            "   - 'title_vi', 'description_vi', 'theme', 'summary', 'themes', and all 'narration_text_vi' MUST be in VIETNAMESE.\n"
-            "   - 'art_style', 'character_style', and all 'image_prompt_en' MUST be in ENGLISH.\n"
-            "2. ORIGINALITY & ADAPTATION:\n"
-            "   - Create an entirely NEW story/script on the same broad theme. Do NOT copy the source text verbatim.\n"
-            f"   - {format_instruction}\n"
-            "3. SCENE BREAKDOWN:\n"
-            "   - Each scene must have a natural Vietnamese voiceover narration ('narration_text_vi') designed for spoken audio.\n"
-            "   - Each scene must have a detailed English image prompt ('image_prompt_en') describing visual composition, character action, and setting.\n"
-            "4. VISUAL & CHARACTER CONSISTENCY:\n"
-            f"   - {style_instruction}\n"
-            "   - Define a detailed 'character_style' establishing the protagonist's recurring visual traits (species, colors, clothing, eyes).\n"
-            "   - Incorporate the character description and art style into every scene's 'image_prompt_en' to maintain visual continuity.\n"
-            "5. OUTPUT FORMAT:\n"
-            "   - Output MUST be strictly valid JSON matching the schema below. Do not output conversational text or explanation.\n\n"
-            "JSON SCHEMA:\n"
+            "You are an expert AI visual director and image-prompt engineer for a YouTube automated video system.\n\n"
+            "Your task is to transform the provided source content into a completely original short story and create high-quality image generation prompts for every scene.\n\n"
+            "IMPORTANT GOALS:\n"
+            "- Preserve the core idea of the source, but NEVER copy sentences, structure, or wording.\n"
+            "- Create a coherent, engaging and original story.\n"
+            "- Every scene must visually connect to the previous and next scene.\n"
+            "- Prioritize visual clarity, sharp subjects, strong composition and readable details.\n"
+            "- The generated images will be used as the ONLY visual source for a video.\n"
+            "- Do NOT request image upscaling, image editing, video generation, or external AI tools.\n"
+            "- Do NOT put text, subtitles, logos, watermarks, UI elements, or written words inside generated images.\n\n"
+            "LANGUAGE RULES:\n"
+            "- 'title_vi', 'description_vi', 'theme', 'summary', 'themes', and all 'narration_text_vi' MUST be in VIETNAMESE.\n"
+            "- 'art_style', 'character_style', and all 'image_prompt_en' MUST be in ENGLISH.\n\n"
+            f"VIDEO FORMAT:\n"
+            f"The video format is: {vf}\n"
+            "If VIDEO_FORMAT = \"16:9\":\n"
+            "- Compose for landscape YouTube video.\n"
+            "- Use a wide cinematic composition.\n"
+            "- Resolution target: 1920x1080.\n"
+            "- Keep the main subject clearly visible and away from extreme edges.\n\n"
+            "If VIDEO_FORMAT = \"9:16\":\n"
+            "- Compose for YouTube Shorts.\n"
+            "- Use a vertical cinematic composition.\n"
+            "- Resolution target: 1080x1920.\n"
+            "- Keep the main subject inside the central safe area.\n"
+            "- Avoid placing important faces, hands, objects or story elements near the top/bottom edges.\n\n"
+            f"ART STYLE:\n"
+            f"The selected visual style is: {vs}\n\n"
+            "VISUAL QUALITY REQUIREMENTS FOR EVERY IMAGE PROMPT:\n"
+            "- highly detailed\n"
+            "- crisp and clean details\n"
+            "- sharp main subject\n"
+            "- clear silhouette\n"
+            "- well-defined facial features when characters are present\n"
+            "- clean edges\n"
+            "- coherent lighting\n"
+            "- natural depth\n"
+            "- detailed foreground, midground and background\n"
+            "- cinematic composition\n"
+            "- strong visual hierarchy\n"
+            "- balanced contrast\n"
+            "- consistent color palette\n"
+            "- professional illustration quality\n"
+            "- visually readable at both laptop and smartphone screen sizes\n\n"
+            "VISUAL SHARPNESS PRIORITY:\n"
+            "Prioritize large, recognizable visual details over excessive micro-details.\n"
+            "The final image will be rendered at 1920x1080 or 1080x1920 and compressed into an online video. Therefore:\n"
+            "- Make the main subject occupy approximately 30–60% of the frame when appropriate.\n"
+            "- Keep faces clearly visible.\n"
+            "- Keep important objects sufficiently large.\n"
+            "- Use clean shapes and strong silhouettes.\n"
+            "- Avoid extremely fine patterns.\n"
+            "- Avoid dense crowds unless essential to the story.\n"
+            "- Avoid excessive small objects in the background.\n"
+            "- Avoid thin lines that may disappear after video compression.\n"
+            "- Avoid excessive fog, haze, film grain, noise and artificial blur.\n"
+            "- Use moderate depth of field.\n"
+            "- Keep the main subject sharply focused.\n"
+            "- Use clear separation between foreground, subject and background.\n"
+            "- Make important visual information readable even on a small smartphone screen.\n\n"
+            "COMPOSITION RULES:\n"
+            "- Each scene must have one clear visual focal point.\n"
+            "- Do not overcrowd the image.\n"
+            "- Avoid excessive tiny objects.\n"
+            "- Keep important details large enough to remain recognizable after video compression.\n"
+            "- Use foreground, midground and background to create depth.\n"
+            "- Use cinematic perspective and controlled camera framing.\n"
+            "- Leave enough visual space for subtle Ken Burns zoom/pan effects.\n"
+            "- Do not rely on extremely close crops.\n"
+            "- Avoid important objects touching the frame edges.\n\n"
+            "CHARACTER CONSISTENCY:\n"
+            "If the same character appears in multiple scenes:\n"
+            "- Keep the same age, face, hairstyle, clothing, body proportions and visual identity.\n"
+            "- Repeat the character description consistently in every relevant image prompt.\n"
+            "- Do not randomly change character appearance between scenes.\n\n"
+            "IMAGE PROMPT STRUCTURE:\n"
+            "For every scene, write ONE detailed English prompt following this order:\n"
+            "1. Main subject and action\n"
+            "2. Character appearance and consistency\n"
+            "3. Environment\n"
+            "4. Foreground / midground / background\n"
+            "5. Camera angle and composition\n"
+            "6. Lighting\n"
+            "7. Color palette\n"
+            "8. Art style\n"
+            "9. Texture and fine details\n"
+            "10. Image quality requirements\n"
+            "11. Negative constraints\n\n"
+            "NEGATIVE CONSTRAINTS:\n"
+            "no text, no subtitles, no captions, no letters, no numbers, no logo, no watermark, no UI, no blurry subject, no low detail, no pixelation, no distorted face, no deformed hands, no extra fingers, no duplicated characters, no cropped head, no cropped important objects, no extreme close-up, no oversaturated colors, no messy composition.\n\n"
+            "IMPORTANT:\n"
+            "Do not write generic prompts such as:\n"
+            "\"beautiful scene\", \"high quality image\", or \"cinematic image\" without explaining the actual visual content.\n"
+            "Every prompt must describe exactly what should be visible in the image.\n"
+            "The image prompt must be self-contained because it will be sent directly to an image generation model without additional context.\n\n"
+            "STORY REQUIREMENTS:\n"
+            "- Create 5–6 scenes unless the story genuinely requires fewer.\n"
+            "- Each scene should move the story forward.\n"
+            "- Avoid redundant scenes.\n"
+            "- Each narration should correspond directly to what is visually shown.\n"
+            "- Maintain consistent characters and environment throughout the story.\n\n"
+            "OUTPUT FORMAT:\n"
+            "Return ONLY valid JSON.\n"
             "{\n"
-            '  "title_vi": "Tiêu đề video YouTube hấp dẫn (tiếng Việt)",\n'
-            '  "description_vi": "Mô tả video chi tiết tiếng Việt kèm 3-5 hashtags (#thegioitihon #hoathinh3d #shorts)",\n'
+            '  "title_vi": "Vietnamese YouTube title",\n'
+            '  "description_vi": "Vietnamese YouTube description",\n'
             '  "theme": "Chủ đề chính",\n'
-            '  "art_style": "cute 3D Pixar animation style, vibrant lighting, soft colors, high detail",\n'
+            f'  "art_style": "{vs}",\n'
             '  "character_style": "Detailed protagonist visual description for consistency",\n'
             '  "niche": "' + str(niche) + '",\n'
-            '  "summary": "Tóm tắt ngắn gọn câu chuyện 1-2 câu",\n'
+            '  "summary": "Short Vietnamese summary",\n'
             '  "themes": ["từ_khóa_1", "từ_khóa_2", "từ_khóa_3"],\n'
             '  "scenes": [\n'
             "    {\n"
             '      "scene_id": 1,\n'
-            '      "narration_text_vi": "Lời đọc thuyết minh cảnh 1 tiếng Việt...",\n'
-            '      "image_prompt_en": "Detailed English visual prompt for scene 1..."\n'
+            '      "narration_text_vi": "Vietnamese narration",\n'
+            '      "image_prompt_en": "Detailed English image generation prompt"\n'
             "    }\n"
             "  ]\n"
             "}\n"
