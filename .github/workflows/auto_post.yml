@@ -17,7 +17,7 @@ on:
 jobs:
   auto-post:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: write
 
@@ -47,10 +47,10 @@ jobs:
           playwright install chromium
           playwright install-deps
 
-      - name: Random delay (0-180 minutes for 3-6hr randomization)
+      - name: Random delay (5-30 minutes)
         if: github.event_name == 'schedule'
         run: |
-          DELAY=$((RANDOM % 10800))
+          DELAY=$((RANDOM % 1501 + 300))
           echo "Sleeping for $DELAY seconds ($((DELAY / 60)) minutes)..."
           sleep $DELAY
 
