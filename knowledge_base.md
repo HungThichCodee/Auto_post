@@ -25,3 +25,9 @@ This file records all generated and posted content to maintain consistency and a
 - **Post URL**: https://youtu.be/FW1HzM97wrU
 ---
 
+### 2026-08-27 13:53:33 | youtube | Gìn giữ di sản nghề làm bánh thủ công gia truyền
+- **Summary**: Nghệ Thuật Bánh Mì Thủ Công Gia Truyền
+- **Themes**: nghe_thuat_thu_cong, lam_banh_truyen_thong, ky_uc_gia_dinh
+- **Post URL**: https://youtu.be/KVmT-ZXTc2w
+---
+
