@@ -50,7 +50,7 @@ def compose_scene_prompt(
     scene_prompt: str,
     art_style: str = "",
     character_style: str = "",
-    quality_suffix: str = "highly detailed, 8k resolution, cinematic lighting",
+    quality_suffix: str = "sharp focus, crisp clean details, clear subject separation, well-defined facial features, detailed textures, natural lighting",
 ) -> str:
     """Compose a full scene prompt enforcing character and art style consistency."""
     parts = []
@@ -78,7 +78,7 @@ class ImageGenerator:
         default_model: str = "flux",
         fallback_model: str = "turbo",
         timeout: float = 60.0,
-        max_retries: int = 3,
+        max_retries: int = 2,
     ):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)

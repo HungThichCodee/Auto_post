@@ -149,6 +149,10 @@ async def cmd_generate(args, scraped_text: str = ""):
     )
     logger.info(f"Story: '{story.title_vi}' with {story.scene_count} scenes")
 
+    # Enforce the chosen format so is_shorts/target_aspect_ratio respect it
+    story.video_format = video_format
+    logger.info(f"Video format locked: {video_format} → aspect_ratio={story.target_aspect_ratio}")
+
     # Step 2: Generate images for each scene
     log_step(logger, "IMAGE GEN", f"Generating {story.scene_count} scene images...")
     image_gen = ImageGenerator(output_dir="output/images")

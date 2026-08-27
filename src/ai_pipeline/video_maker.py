@@ -101,7 +101,7 @@ class VideoMaker:
             codec="libx264",
             audio_codec="aac",
             preset="medium",
-            bitrate="8000k",
+            ffmpeg_params=["-crf", "18"],
             threads=2,
             logger=None,  # Suppress moviepy's verbose output
         )
@@ -125,7 +125,7 @@ class VideoMaker:
             duration=total_duration,
             aspect_ratio=aspect,
             resolution=target_res,
-            fps=24,
+            fps=30,
             file_size_bytes=file_size,
             scene_count=len(valid_scenes),
             has_subtitles=True,

@@ -260,6 +260,7 @@ class StoryScript:
     summary: str = ""
     themes: List[str] = field(default_factory=list)
     created_at: str = ""
+    video_format: str = ""  # "shorts" or "video"; empty = auto-detect
 
     def __post_init__(self):
         self.title_vi = self.title_vi.strip() if self.title_vi else ""
@@ -298,6 +299,12 @@ class StoryScript:
 
     @property
     def is_shorts(self) -> bool:
+        # If video_format was explicitly set, respect it
+        if self.video_format == "shorts":
+            return True
+        if self.video_format == "video":
+            return False
+        # Fallback: auto-detect from duration/scene count
         if self.total_duration > 0.0:
             return self.total_duration < 60.0
         return len(self.scenes) <= 4
@@ -322,7 +329,8 @@ class StoryScript:
     def from_dict(cls, data: Dict[str, Any]) -> "StoryScript":
         valid_fields = {
             "title_vi", "description_vi", "theme", "art_style",
-            "scenes", "niche", "character_style", "summary", "themes", "created_at"
+            "scenes", "niche", "character_style", "summary", "themes", "created_at",
+            "video_format"
         }
         filtered = {k: v for k, v in data.items() if k in valid_fields}
         # Handle key aliases from raw LLM output
