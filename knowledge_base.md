@@ -49,3 +49,9 @@ This file records all generated and posted content to maintain consistency and a
 - **Post URL**: https://youtu.be/nIRiH7N3th4
 ---
 
+### 2026-08-28 17:51:33 | youtube | Sáng tạo pha chế
+- **Summary**: Nghệ Thuật Sáng Tạo Thức Uống Đa Sắc Màu | Mix & Match
+- **Themes**: sang_tao_pha_che, am_thuc_hien_dai, loi_song_tre
+- **Post URL**: https://youtu.be/VYG3zVecWdA
+---
+
