@@ -37,3 +37,9 @@ This file records all generated and posted content to maintain consistency and a
 - **Post URL**: https://youtu.be/zVFkJNY9Rd8
 ---
 
+### 2026-08-28 00:48:45 | youtube | Hội họa thực vật và thiên nhiên mùa thu
+- **Summary**: Sắc Màu Thảo Mộc: Hành Trình Minh Họa Thiên Nhiên Mùa Thu
+- **Themes**: hoi_hoa, thien_nhien, thao_moc, mua_thu
+- **Post URL**: https://youtu.be/81ldSCQhXRg
+---
+
