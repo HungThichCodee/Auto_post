@@ -43,3 +43,9 @@ This file records all generated and posted content to maintain consistency and a
 - **Post URL**: https://youtu.be/81ldSCQhXRg
 ---
 
+### 2026-08-28 15:35:50 | youtube | Sự ấm áp nơi đô thị
+- **Summary**: Tách Trà Đêm Trên Chuyến Tàu Đô Thị
+- **Themes**: chuyen_tau_dem, su_am_ap, cuoc_song_do_thi
+- **Post URL**: https://youtu.be/nIRiH7N3th4
+---
+
