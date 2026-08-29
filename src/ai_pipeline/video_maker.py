@@ -87,7 +87,7 @@ class VideoMaker:
                 "-c", "copy",
                 output_path
             ]
-                        proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             try:
                 _, stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
             except asyncio.TimeoutError:
