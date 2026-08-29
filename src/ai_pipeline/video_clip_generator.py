@@ -62,7 +62,7 @@ class VideoClipGenerator:
                 scene,
                 aspect_ratio=aspect_ratio,
                 art_style=art_style,
-                is_hero_scene=getattr(scene, "is_hero_scene", (scene.scene_id in {1, len(scenes)//2, len(scenes)}))
+                is_hero_scene=True
             )
             for scene in scenes
         ]
@@ -186,7 +186,7 @@ class VideoClipGenerator:
         url = f"https://gen.pollinations.ai/video/{encoded_prompt}?width={w}&height={h}&model=seedance"
 
         try:
-            async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=180.0, follow_redirects=True) as client:
                 resp = await client.get(url)
                 # Ensure HTTP 200, size > 50KB, and valid MP4 binary header (ftyp or moov box)
                 if resp.status_code == 200 and len(resp.content) > 50000:

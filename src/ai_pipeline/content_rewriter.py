@@ -16,7 +16,7 @@ from src.memory.knowledge_base import KnowledgeBase
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.0-flash"
+DEFAULT_MODEL = "gemini-3.6-flash"
 
 
 class ContentRewriter:
