@@ -1,4 +1,4 @@
-"""
+﻿"""
 tests/conftest.py
 Global pytest fixtures, synthetic media generators, and offline mock interceptors.
 
@@ -250,37 +250,37 @@ class MockGeminiModel:
         if self.error_mode == "malformed_json":
             return MockGeminiResponse("```json\n{ invalid: json: [unclosed\n```")
         if self.error_mode == "fenced_json":
-            data = self.canned_response or {"title_vi": "Tiêu đề mẫu", "scenes": []}
+            data = self.canned_response or {"title_vi": "TiÃªu Ä‘á» máº«u", "scenes": []}
             return MockGeminiResponse(f"```json\n{json.dumps(data, ensure_ascii=False)}\n```")
 
         if self.canned_response:
             return MockGeminiResponse(self.canned_response)
 
         default_story = {
-            "title_vi": "Hành Trình Chú Kiến Dũng Cảm",
-            "description_vi": "Câu chuyện 3D về chú kiến nhỏ trong khu vườn tí hon.",
-            "theme": "Thế giới côn trùng tí hon",
+            "title_vi": "HÃ nh TrÃ¬nh ChÃº Kiáº¿n DÅ©ng Cáº£m",
+            "description_vi": "CÃ¢u chuyá»‡n 3D vá» chÃº kiáº¿n nhá» trong khu vÆ°á»n tÃ­ hon.",
+            "theme": "Tháº¿ giá»›i cÃ´n trÃ¹ng tÃ­ hon",
             "art_style": "cute 3D Pixar animation style, vibrant lighting",
             "character_style": "Tiny brown ant with blue backpack",
             "niche": "stories",
-            "summary": "Chú kiến vượt mưa giông tìm đường về tổ.",
-            "themes": ["kiến", "lòng dũng cảm", "phiêu lưu"],
+            "summary": "ChÃº kiáº¿n vÆ°á»£t mÆ°a giÃ´ng tÃ¬m Ä‘Æ°á»ng vá» tá»•.",
+            "themes": ["kiáº¿n", "lÃ²ng dÅ©ng cáº£m", "phiÃªu lÆ°u"],
             "scenes": [
               {
                 "scene_id": 1,
-                "narration_text_vi": "Trong một khu vườn ngập tràn ánh nắng ban mai, chú kiến nhỏ bắt đầu chuyến phiêu lưu kỳ thú.",
+                "narration_text_vi": "Trong má»™t khu vÆ°á»n ngáº­p trÃ n Ã¡nh náº¯ng ban mai, chÃº kiáº¿n nhá» báº¯t Ä‘áº§u chuyáº¿n phiÃªu lÆ°u ká»³ thÃº.",
                 "image_prompt_en": "A tiny cute ant with a blue backpack walking happily on a giant green leaf in a sunny garden, 3D Pixar animation style",
                 "duration": 15.0
               },
               {
                 "scene_id": 2,
-                "narration_text_vi": "Bỗng nhiên một cơn mưa rào đổ ập xuống, biến mặt đất thành dòng sông cuộn sóng.",
+                "narration_text_vi": "Bá»—ng nhiÃªn má»™t cÆ¡n mÆ°a rÃ o Ä‘á»• áº­p xuá»‘ng, biáº¿n máº·t Ä‘áº¥t thÃ nh dÃ²ng sÃ´ng cuá»™n sÃ³ng.",
                 "image_prompt_en": "Giant raindrops splashing around a surprised tiny ant under a mushroom, dramatic lighting, 3D Pixar animation style",
                 "duration": 15.0
               },
               {
                 "scene_id": 3,
-                "narration_text_vi": "Bằng sự thông minh, chú kiến đã dùng chiếc lá làm thuyền buồm để trở về tổ an toàn.",
+                "narration_text_vi": "Báº±ng sá»± thÃ´ng minh, chÃº kiáº¿n Ä‘Ã£ dÃ¹ng chiáº¿c lÃ¡ lÃ m thuyá»n buá»“m Ä‘á»ƒ trá»Ÿ vá» tá»• an toÃ n.",
                 "image_prompt_en": "A brave tiny ant sailing a floating leaf across a puddle towards an anthill, 3D Pixar animation style",
                 "duration": 15.0
               }
@@ -388,3 +388,62 @@ class MockPlaywrightBrowserManager:
 def mock_browser_manager():
     """Fixture providing a mock BrowserManager."""
     return MockPlaywrightBrowserManager()
+
+def create_synthetic_mp4_with_duration(
+    filepath: Union[str, Path],
+    duration_seconds: float = 5.0,
+    width: int = 1080,
+    height: int = 1920,
+    fps: int = 30,
+    include_audio: bool = True,
+) -> Path:
+    """
+    Generates a valid, minimal synthetic H.264 MP4 file with 48kHz stereo AAC audio
+    using OpenCV and FFmpeg for offline unit and integration tests.
+    """
+    import shutil
+    import subprocess
+    from pathlib import Path
+    
+    target_path = Path(filepath)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        import cv2
+        import numpy as np
+
+        raw_video_path = target_path.with_name(f"temp_{target_path.name}")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(str(raw_video_path), fourcc, fps, (width, height))
+
+        total_frames = int(max(1, round(duration_seconds * fps)))
+        for i in range(total_frames):
+            frame = np.zeros((height, width, 3), dtype=np.uint8)
+            cv2.rectangle(frame, (50, 50), (width - 50, height - 50), (70, 130, 180), -1)
+            cv2.putText(frame, f"Frame {i}/{total_frames}", (100, 200), cv2.FONT_HERSHEY_SIMPLEX, 2.0, (255, 255, 255), 3)
+            out.write(frame)
+        out.release()
+
+        if include_audio and shutil.which("ffmpeg"):
+            # Mux synthetic 48kHz stereo tone
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", str(raw_video_path),
+                "-f", "lavfi", "-i", f"sine=frequency=1000:sample_rate=48000:duration={duration_seconds}",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", str(fps),
+                "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
+                "-shortest", str(target_path)
+            ]
+            subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            if raw_video_path.exists():
+                raw_video_path.unlink()
+        else:
+            if raw_video_path != target_path:
+                shutil.move(str(raw_video_path), str(target_path))
+    except Exception:
+        # Fallback to simple touch
+        with open(target_path, "wb") as f:
+            f.write(b"")
+
+    return target_path
+

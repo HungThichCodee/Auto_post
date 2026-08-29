@@ -1,347 +1,274 @@
-"""
-src/ai_pipeline/video_maker.py
-Video assembly engine: combines scene images + audio + subtitles into final MP4.
-"""
-
-import asyncio
+﻿import asyncio
 import logging
 import os
 import random
+import shutil
+import subprocess
 from pathlib import Path
-from typing import List, Optional, Tuple
-
-# Monkey-patch for PIL 10.0.0+ compatibility with moviepy 1.x
-import PIL
-if not hasattr(PIL.Image, 'ANTIALIAS'):
-    PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
+from typing import List, Optional, Tuple, Union
 
 from src.models.pipeline_models import Scene, StoryScript, VideoOutput
+from src.ai_pipeline.duration_synchronizer import DurationSynchronizer
 
 logger = logging.getLogger(__name__)
 
-
 class VideoMaker:
-    """Assembles scene images and audio into a complete video with Ken Burns effect and subtitles."""
+    """Assembles synced video clips and subtitles into a final video."""
 
-    SHORTS_RES = (1080, 1920)  # 9:16
-    REGULAR_RES = (1920, 1080)  # 16:9
+    SHORTS_RES = (1080, 1920)
+    REGULAR_RES = (1920, 1080)
 
-    def __init__(self, output_dir: str = "output"):
+    def __init__(self, output_dir: Union[str, Path] = "output/assets"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.duration_synchronizer = DurationSynchronizer(use_ffmpeg_direct=True)
+        logger.info(f"VideoMaker initialized. Output: {self.output_dir}")
 
     async def create_video(
         self,
         story: StoryScript,
         output_path: str = "output/final_video.mp4",
+        use_ffmpeg_demuxer: bool = True,
     ) -> VideoOutput:
-        """Create a complete video from a StoryScript with images and audio."""
-        # Import moviepy here to avoid import errors at module level
-        try:
-            from moviepy.editor import (
-                ImageClip,
-                AudioFileClip,
-                CompositeVideoClip,
-                concatenate_videoclips,
-                TextClip,
-                ColorClip,
-            )
-        except ImportError as e:
-            raise RuntimeError(f"moviepy is required: {e}. Install with: pip install moviepy")
+        """Assembles synchronized video clips with ASS subtitles and outro card into final MP4."""
+        from src.ai_pipeline.moviepy_adapter import (
+            VideoFileClip, AudioClip, concatenate_videoclips, MoviePyAdapter
+        )
 
-        # Validate scenes have assets
         valid_scenes = [
             s for s in story.scenes
-            if s.image_path and os.path.exists(s.image_path)
-            and s.audio_path and os.path.exists(s.audio_path)
+            if ((s.video_path and os.path.exists(s.video_path)) or
+                (s.image_path and os.path.exists(s.image_path))) and
+               (s.audio_path and os.path.exists(s.audio_path))
         ]
 
         if not valid_scenes:
-            raise ValueError("No valid scenes with both image_path and audio_path found.")
+            raise ValueError("No valid scenes with valid video/image and audio paths found.")
 
-        logger.info(f"Creating video from {len(valid_scenes)} scenes...")
-
-        # Determine format
         is_shorts = story.is_shorts
         target_res = self.SHORTS_RES if is_shorts else self.REGULAR_RES
-        aspect = "9:16" if is_shorts else "16:9"
-        logger.info(f"Video format: {'Shorts (9:16)' if is_shorts else 'Regular (16:9)'} at {target_res}")
+        margin_v = 480 if is_shorts else 65
 
-        # Build scene clips
+        synced_clip_paths = []
         scene_clips = []
+
         for scene in valid_scenes:
-            try:
-                clip = self._create_scene_clip(
-                    scene, target_res, ImageClip, AudioFileClip,
-                    CompositeVideoClip, TextClip, ColorClip
+            synced_path = str(self.output_dir / f"synced_scene_{scene.scene_id:03d}.mp4")
+            if scene.video_path and os.path.exists(scene.video_path):
+                # Dynamic Video Clip -> Duration Synchronizer
+                await self.duration_synchronizer.synchronize_scene(
+                    scene.video_path, scene.audio_path, synced_path, target_resolution=target_res
                 )
-                scene_clips.append(clip)
-                logger.info(f"Scene {scene.scene_id} clip created ({scene.duration:.1f}s)")
-            except Exception as e:
-                logger.error(f"Failed to create clip for scene {scene.scene_id}: {e}")
-                continue
+            else:
+                # Static Image Fallback -> 2.5D Ken Burns Transform
+                await self._render_ken_burns_video(scene, synced_path, target_res)
 
-        if not scene_clips:
-            raise ValueError("No scene clips could be created.")
+            # Burn Subtitles into individual scene
+            subtitled_path = str(self.output_dir / f"subtitled_scene_{scene.scene_id:03d}.mp4")
+            await self._burn_scene_subtitles(synced_path, scene, subtitled_path, margin_v)
+            synced_clip_paths.append(subtitled_path)
 
-        # Create outro CTA clip
-        try:
-            outro = self._create_outro_clip(
-                target_res, TextClip, ColorClip, CompositeVideoClip
+        if use_ffmpeg_demuxer and shutil.which("ffmpeg"):
+            concat_list_path = self.output_dir / "scenes_list.txt"
+            
+            # Write outro clip
+            outro_path = str(self.output_dir / "outro_scene.mp4")
+            await self._create_outro_video(target_res, outro_path)
+            synced_clip_paths.append(outro_path)
+
+            with open(concat_list_path, "w", encoding="utf-8") as f:
+                for p in synced_clip_paths:
+                    f.write(f"file '{Path(p).resolve().as_posix()}'\n")
+
+            cmd = [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0",
+                "-i", str(concat_list_path),
+                "-c", "copy",
+                output_path
+            ]
+            proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            _, stderr = await proc.communicate()
+            if proc.returncode != 0:
+                logger.error(f"FFmpeg concat failed: {stderr.decode()}")
+        else:
+            for p in synced_clip_paths:
+                scene_clips.append(VideoFileClip(p))
+
+            outro_path = str(self.output_dir / "outro_scene.mp4")
+            await self._create_outro_video(target_res, outro_path)
+            scene_clips.append(VideoFileClip(outro_path))
+
+            final = concatenate_videoclips(scene_clips, method="chain")
+            final.write_videofile(
+                output_path,
+                fps=30,
+                codec="libx264",
+                audio_codec="aac",
+                preset="medium",
+                ffmpeg_params=["-crf", "18", "-movflags", "+faststart"],
+                logger=None
             )
-            scene_clips.append(outro)
-            logger.info("Outro CTA clip added (3s)")
-        except Exception as e:
-            logger.warning(f"Outro creation failed: {e}. Skipping.")
-
-        # Concatenate all clips
-        logger.info("Concatenating scene clips...")
-        final = concatenate_videoclips(scene_clips, method="compose")
-
-        # Write output
-        out_path = Path(output_path)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"Rendering video to {out_path}...")
-        # Run in thread to not block async loop
-        await asyncio.to_thread(
-            final.write_videofile,
-            str(out_path),
-            fps=30,
-            codec="libx264",
-            audio_codec="aac",
-            preset="medium",
-            ffmpeg_params=["-crf", "18"],
-            threads=2,
-            logger=None,  # Suppress moviepy's verbose output
-        )
-
-        # Cleanup clips
-        for clip in scene_clips:
-            try:
-                clip.close()
-            except Exception:
-                pass
-        final.close()
-
-        # Get file size
-        file_size = out_path.stat().st_size if out_path.exists() else 0
-        total_duration = sum(s.duration for s in valid_scenes)
-
-        logger.info(f"Video created: {out_path} ({total_duration:.1f}s, {file_size / 1024 / 1024:.1f}MB)")
+            for c in scene_clips:
+                c.close()
+            final.close()
 
         return VideoOutput(
-            video_path=str(out_path),
-            duration=total_duration,
-            aspect_ratio=aspect,
+            video_path=output_path,
+            duration=await self.duration_synchronizer.probe_duration(output_path),
+            aspect_ratio="9:16" if is_shorts else "16:9",
             resolution=target_res,
             fps=30,
-            file_size_bytes=file_size,
+            file_size_bytes=os.path.getsize(output_path),
             scene_count=len(valid_scenes),
             has_subtitles=True,
         )
 
-    def _create_scene_clip(
-        self, scene: Scene, target_res: Tuple[int, int],
-        ImageClip, AudioFileClip, CompositeVideoClip, TextClip, ColorClip
-    ):
-        """Create a single scene clip with image, audio, Ken Burns effect, and subtitles."""
-        # Load audio to get duration
-        audio = AudioFileClip(scene.audio_path)
-        duration = audio.duration
+    async def _render_ken_burns_video(self, scene: Scene, output_path: str, target_res: Tuple[int, int]):
+        """Renders 2.5D Ken Burns from static image via MoviePy."""
+        from src.ai_pipeline.moviepy_adapter import (
+            ImageClip, AudioFileClip, MoviePyAdapter
+        )
+        def _process():
+            audio = AudioFileClip(scene.audio_path)
+            duration = audio.duration
+            img_clip = ImageClip(scene.image_path).set_duration(duration)
 
-        # Load and resize image
-        img_clip = ImageClip(scene.image_path).set_duration(duration)
+            w, h = target_res
+            scale_factor = 1.08
+            img_clip = MoviePyAdapter.resize(img_clip, height=int(h * scale_factor))
+            if img_clip.w < w * scale_factor:
+                img_clip = MoviePyAdapter.resize(img_clip, width=int(w * scale_factor))
 
-        # Apply Ken Burns effect
-        img_clip = self._apply_ken_burns(img_clip, target_res, duration)
-
-        # Set audio
-        img_clip = img_clip.set_audio(audio)
-
-        # Add subtitles
-        subtitle_text = scene.subtitle_text or scene.narration_text_vi
-        try:
-            final_clip = self._add_subtitles(
-                img_clip, subtitle_text, target_res, duration,
-                CompositeVideoClip, TextClip, ColorClip
-            )
-        except Exception as e:
-            logger.warning(f"Subtitle rendering failed (ImageMagick may be missing): {e}. Skipping subtitles.")
-            final_clip = img_clip
-
-        return final_clip
-
-    def _apply_ken_burns(self, clip, target_res: Tuple[int, int], duration: float):
-        """Apply Ken Burns (slow zoom/pan) effect on an image clip."""
-        w, h = target_res
-
-        # Scale image slightly larger than target to allow zoom/pan
-        scale_factor = 1.08
-
-        # Resize image to fill target with extra margin
-        clip = clip.resize(height=int(h * scale_factor))
-        if clip.w < w * scale_factor:
-            clip = clip.resize(width=int(w * scale_factor))
-
-        # Choose random effect
-        effect = random.choice(["zoom_in", "zoom_out", "pan_right", "pan_left"])
-
-        if effect == "zoom_in":
-            # Start wide, end tight
-            def zoom_in_effect(get_frame, t):
-                progress = t / duration if duration > 0 else 0
-                current_scale = 1.0 + progress * 0.06  # 1.0 -> 1.06
-                new_w = int(w / current_scale)
-                new_h = int(h / current_scale)
-                cx, cy = clip.w // 2, clip.h // 2
-                x1 = max(0, cx - new_w // 2)
-                y1 = max(0, cy - new_h // 2)
-                frame = get_frame(t)
-                cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
-                from PIL import Image as PILImage
-                import numpy as np
-                img = PILImage.fromarray(cropped)
-                img = img.resize((w, h), PILImage.LANCZOS)
-                return np.array(img)
-            return clip.fl(zoom_in_effect, apply_to=["mask"])
-
-        elif effect == "zoom_out":
-            def zoom_out_effect(get_frame, t):
-                progress = t / duration if duration > 0 else 0
-                current_scale = 1.06 - progress * 0.06  # 1.06 -> 1.0
-                new_w = int(w / current_scale)
-                new_h = int(h / current_scale)
-                cx, cy = clip.w // 2, clip.h // 2
-                x1 = max(0, cx - new_w // 2)
-                y1 = max(0, cy - new_h // 2)
-                frame = get_frame(t)
-                cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
-                from PIL import Image as PILImage
-                import numpy as np
-                img = PILImage.fromarray(cropped)
-                img = img.resize((w, h), PILImage.LANCZOS)
-                return np.array(img)
-            return clip.fl(zoom_out_effect, apply_to=["mask"])
-
-        else:
-            # Pan left or right
-            direction = 1 if effect == "pan_right" else -1
-
-            def pan_effect(get_frame, t):
-                progress = t / duration if duration > 0 else 0
-                max_shift = clip.w - w
-                shift_x = int(progress * max_shift * 0.5)
-                if direction < 0:
-                    shift_x = max_shift - shift_x
-                shift_x = max(0, min(shift_x, clip.w - w))
-                cy = max(0, (clip.h - h) // 2)
-                frame = get_frame(t)
-                cropped = frame[cy:cy + h, shift_x:shift_x + w]
-                if cropped.shape[1] < w or cropped.shape[0] < h:
+            effect = random.choice(["zoom_in", "zoom_out", "pan_right", "pan_left"])
+            
+            if effect == "zoom_in":
+                def zoom_in_effect(get_frame, t):
+                    progress = t / duration if duration > 0 else 0
+                    current_scale = 1.0 + progress * 0.06
+                    new_w, new_h = int(w / current_scale), int(h / current_scale)
+                    cx, cy = img_clip.w // 2, img_clip.h // 2
+                    x1, y1 = max(0, cx - new_w // 2), max(0, cy - new_h // 2)
+                    frame = get_frame(t)
+                    cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
                     from PIL import Image as PILImage
                     import numpy as np
-                    img = PILImage.fromarray(cropped)
-                    img = img.resize((w, h), PILImage.LANCZOS)
+                    img = PILImage.fromarray(cropped).resize((w, h), PILImage.LANCZOS)
                     return np.array(img)
-                return cropped
-            return clip.fl(pan_effect, apply_to=["mask"])
-
-    def _add_subtitles(
-        self, clip, text: str, target_res: Tuple[int, int], duration: float,
-        CompositeVideoClip, TextClip, ColorClip
-    ):
-        """Add Vietnamese subtitle text with semi-transparent background bar at bottom."""
-        w, h = target_res
-
-        # Wrap long text
-        max_chars_per_line = 30 if w < h else 45  # Shorter lines for vertical video
-        words = text.split()
-        lines = []
-        current_line = ""
-        for word in words:
-            if len(current_line) + len(word) + 1 <= max_chars_per_line:
-                current_line = f"{current_line} {word}".strip()
+                img_clip = MoviePyAdapter.time_transform(img_clip, zoom_in_effect)
             else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-        if current_line:
-            lines.append(current_line)
-        wrapped_text = "\n".join(lines[:3])  # Max 3 lines
+                def zoom_out_effect(get_frame, t):
+                    progress = t / duration if duration > 0 else 0
+                    current_scale = 1.06 - progress * 0.06
+                    new_w, new_h = int(w / current_scale), int(h / current_scale)
+                    cx, cy = img_clip.w // 2, img_clip.h // 2
+                    x1, y1 = max(0, cx - new_w // 2), max(0, cy - new_h // 2)
+                    frame = get_frame(t)
+                    cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
+                    from PIL import Image as PILImage
+                    import numpy as np
+                    img = PILImage.fromarray(cropped).resize((w, h), PILImage.LANCZOS)
+                    return np.array(img)
+                img_clip = MoviePyAdapter.time_transform(img_clip, zoom_out_effect)
 
-        # Create text clip — use Noto Sans CJK (installed via fonts-noto-cjk on Ubuntu)
-        fontsize = 48 if w < h else 52
-        txt_clip = TextClip(
-            wrapped_text,
-            fontsize=fontsize,
-            color="white",
-            font="Noto-Sans-CJK-JP-Bold",
-            stroke_color="black",
-            stroke_width=3,
-            method="caption",
-            size=(int(w * 0.9), None),
-            align="center",
-        ).set_duration(duration)
+            img_clip = MoviePyAdapter.set_audio(img_clip, audio)
+            img_clip.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", logger=None)
+            img_clip.close()
+            audio.close()
+            
+        await asyncio.to_thread(_process)
 
-        # Position text at bottom with padding
-        txt_h = txt_clip.h
-        bar_height = txt_h + 40
-        y_pos = h - bar_height - 25
+    async def _burn_scene_subtitles(self, input_path: str, scene: Scene, output_path: str, margin_v: int):
+        """Burns subtitles directly via MoviePy since Windows FFmpeg ASS setup is complex without external font configs."""
+        from src.ai_pipeline.moviepy_adapter import (
+            VideoFileClip, TextClip, ColorClip, CompositeVideoClip, MoviePyAdapter
+        )
+        def _process():
+            clip = VideoFileClip(input_path)
+            w, h = clip.w, clip.h
+            text = scene.subtitle_text or scene.narration_text_vi
+            max_chars = 30 if w < h else 45
+            
+            words = text.split()
+            lines, current_line = [], ""
+            for word in words:
+                if len(current_line) + len(word) + 1 <= max_chars:
+                    current_line = f"{current_line} {word}".strip()
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            if current_line:
+                lines.append(current_line)
+            wrapped_text = "\n".join(lines[:3])
 
-        # Semi-transparent background bar
-        bg_bar = ColorClip(
-            size=(w, bar_height),
-            color=(0, 0, 0),
-        ).set_opacity(0.7).set_duration(duration).set_position((0, y_pos))
+            fontsize = 48 if w < h else 52
+            
+            try:
+                txt_clip = TextClip(
+                    wrapped_text,
+                    fontsize=fontsize,
+                    color="white",
+                    font="Noto-Sans-CJK-JP-Bold",
+                    stroke_color="black",
+                    stroke_width=3,
+                    method="caption",
+                    size=(int(w * 0.9), None),
+                    align="center",
+                ).set_duration(clip.duration)
+                
+                bar_height = txt_clip.h + 40
+                y_pos = h - bar_height - (25 if w < h else 65)
 
-        txt_clip = txt_clip.set_position(("center", y_pos + 20))
+                bg_bar = ColorClip(size=(w, bar_height), color=(0, 0, 0))
+                bg_bar = MoviePyAdapter.set_duration(bg_bar, clip.duration)
+                bg_bar = bg_bar.set_opacity(0.7).set_position((0, y_pos))
 
-        return CompositeVideoClip([clip, bg_bar, txt_clip], size=(w, h))
+                txt_clip = txt_clip.set_position(("center", y_pos + 20))
+                
+                final = CompositeVideoClip([clip, bg_bar, txt_clip], size=(w, h))
+            except Exception as e:
+                logger.warning(f"TextClip failed: {e}. Outputting without subtitles.")
+                final = clip
+                
+            final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", logger=None)
+            final.close()
+            clip.close()
 
-    def _create_outro_clip(
-        self, target_res: Tuple[int, int],
-        TextClip, ColorClip, CompositeVideoClip
-    ):
-        """Create a 3-second outro clip with CTA text on dark background."""
-        w, h = target_res
-        outro_duration = 3.0
+        await asyncio.to_thread(_process)
 
-        # Dark background
-        bg = ColorClip(size=(w, h), color=(15, 15, 25)).set_duration(outro_duration)
+    async def _create_outro_video(self, target_res: Tuple[int, int], output_path: str):
+        """Creates an outro MP4 clip."""
+        from src.ai_pipeline.moviepy_adapter import (
+            ColorClip, TextClip, CompositeVideoClip, AudioClip, MoviePyAdapter, MOVIEPY_V2
+        )
+        def _process():
+            w, h = target_res
+            duration = 3.0
+            bg = ColorClip(size=(w, h), color=(15, 15, 25))
+            bg = MoviePyAdapter.set_duration(bg, duration)
 
-        # Main CTA text
-        cta_text = "ĐĂNG KÝ KÊNH 🔔\nLIKE 👍 • CHIA SẺ 🔗"
-        fontsize_main = 52 if w < h else 56
+            try:
+                cta_clip = TextClip(
+                    "ĐĂNG KÝ KÊNH 🔔\nLIKE 👍 CHIA SẺ 🔗",
+                    fontsize=52 if w < h else 56,
+                    color="white",
+                    font="Noto-Sans-CJK-JP-Bold",
+                    stroke_color="black",
+                    stroke_width=2,
+                    method="caption",
+                    size=(int(w * 0.85), None),
+                    align="center",
+                )
+                cta_clip = MoviePyAdapter.set_duration(cta_clip, duration).set_position("center")
+                final = CompositeVideoClip([bg, cta_clip], size=(w, h))
+            except Exception:
+                final = bg
 
-        cta_clip = TextClip(
-            cta_text,
-            fontsize=fontsize_main,
-            color="white",
-            font="Noto-Sans-CJK-JP-Bold",
-            stroke_color="black",
-            stroke_width=2,
-            method="caption",
-            size=(int(w * 0.85), None),
-            align="center",
-        ).set_duration(outro_duration).set_position("center")
+            silence_audio = AudioClip(lambda t: [0, 0] if MOVIEPY_V2 else 0, duration=duration, fps=48000)
+            final = MoviePyAdapter.set_audio(final, silence_audio)
+            
+            final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", logger=None)
+            final.close()
 
-        # Sub text
-        sub_text = "Cảm ơn bạn đã xem! ❤️"
-        fontsize_sub = 32 if w < h else 36
-
-        sub_clip = TextClip(
-            sub_text,
-            fontsize=fontsize_sub,
-            color="#AAAAAA",
-            font="Noto-Sans-CJK-JP-Bold",
-            method="caption",
-            size=(int(w * 0.8), None),
-            align="center",
-        ).set_duration(outro_duration)
-
-        # Position sub text below center
-        sub_y = (h // 2) + 80
-        sub_clip = sub_clip.set_position(("center", sub_y))
-
-        return CompositeVideoClip([bg, cta_clip, sub_clip], size=(w, h))
+        await asyncio.to_thread(_process)

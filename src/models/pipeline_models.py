@@ -174,16 +174,25 @@ class ScrapedVideo(ScrapedContent):
 @dataclass
 class Scene:
     """
-    Individual scene model representing narration, visual prompt, rendered assets, and duration.
+    Individual scene model representing narration, visual prompts, rendered assets,
+    dynamic video clips, and audio synchronization metadata.
     """
     scene_id: int
     narration_text_vi: str
     image_prompt_en: str
     image_path: Optional[str] = None
     audio_path: Optional[str] = None
-    duration: float = 0.0
+    duration: float = 0.0                      # Voiceover speech duration (seconds)
     status: str = "pending"
     subtitle_text: Optional[str] = None
+    
+    # --- Dynamic Video Extensions ---
+    video_prompt_en: Optional[str] = None      # Cinematic temporal motion prompt
+    video_path: Optional[str] = None           # Path to rendered dynamic MP4 clip
+    video_clip_duration: float = 0.0          # Native duration of AI video clip
+    camera_movement: Optional[str] = "static" # dolly_in, tracking, tilt_up, orbit, etc.
+    sync_strategy: str = "auto"                # 'auto', 'trim', 'slowmo', 'ping_pong', 'freeze_pad'
+    generation_source: str = "image"           # 'hf_wan2.1', 'hf_ltx', 'pollinations_video', 'local_wan', 'ken_burns'
 
     def __post_init__(self):
         if not isinstance(self.scene_id, int) or self.scene_id < 1:
@@ -194,9 +203,11 @@ class Scene:
         self.image_prompt_en = self.image_prompt_en.strip() if self.image_prompt_en else ""
         if not self.image_prompt_en:
             raise ValueError("Scene 'image_prompt_en' cannot be empty.")
+        if not self.video_prompt_en:
+            self.video_prompt_en = self.image_prompt_en
         if self.duration < 0.0:
             raise ValueError(f"Scene 'duration' cannot be negative, got {self.duration}")
-        valid_statuses = {"pending", "image_ready", "audio_ready", "completed", "failed"}
+        valid_statuses = {"pending", "image_ready", "video_ready", "audio_ready", "completed", "failed"}
         if self.status not in valid_statuses:
             raise ValueError(f"Invalid status '{self.status}'. Must be one of {valid_statuses}")
         if self.subtitle_text is None:
@@ -209,17 +220,14 @@ class Scene:
     def from_dict(cls, data: Dict[str, Any]) -> "Scene":
         valid_fields = {
             "scene_id", "narration_text_vi", "image_prompt_en",
-            "image_path", "audio_path", "duration", "status", "subtitle_text"
+            "image_path", "audio_path", "duration", "status", "subtitle_text",
+            "video_prompt_en", "video_path", "video_clip_duration",
+            "camera_movement", "sync_strategy", "generation_source"
         }
         filtered = {k: v for k, v in data.items() if k in valid_fields}
-        # Backward/alternative key aliases from LLM JSON outputs
+        # Backward/alternative key aliases
         if "scene_id" not in filtered:
-            if "scene_number" in data:
-                filtered["scene_id"] = int(data["scene_number"])
-            elif "id" in data:
-                filtered["scene_id"] = int(data["id"])
-            elif "scene" in data:
-                filtered["scene_id"] = int(data["scene"])
+            filtered["scene_id"] = int(data.get("scene_number", data.get("id", data.get("scene", 1))))
         if "narration_text_vi" not in filtered:
             if "narration" in data:
                 filtered["narration_text_vi"] = data["narration"]

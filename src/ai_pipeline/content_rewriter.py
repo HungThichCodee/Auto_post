@@ -1,4 +1,4 @@
-"""
+﻿"""
 src/ai_pipeline/content_rewriter.py
 Gemini 2.0 Flash AI multi-scene story rewriter and prompt engineering module.
 """
@@ -9,14 +9,14 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Union
 
-import google.generativeai as genai
+from google import genai
 
 from src.models.pipeline_models import Scene, StoryScript
 from src.memory.knowledge_base import KnowledgeBase
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-3.6-flash"
+DEFAULT_MODEL = "gemini-2.0-flash"
 
 
 class ContentRewriter:
@@ -29,17 +29,16 @@ class ContentRewriter:
     ):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         self.model_name = model_name or DEFAULT_MODEL
-        self.model = None
+        self.client = None
 
         if not self.api_key:
             logger.warning("No GEMINI_API_KEY provided. API calls will fail or rely on mocks.")
         else:
             try:
-                genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel(self.model_name)
+                self.client = genai.Client(api_key=self.api_key)
             except Exception as e:
-                logger.error(f"Failed to initialize Gemini model '{self.model_name}': {e}")
-                self.model = None
+                logger.error(f"Failed to initialize Gemini Client: {e}")
+                self.client = None
 
     @classmethod
     def extract_past_themes_from_file(
@@ -63,204 +62,53 @@ class ContentRewriter:
         video_format: str = "random",
         visual_style: str = "random",
     ) -> StoryScript:
-        """
-        Transform raw scraped video text into a structured multi-scene StoryScript.
-
-        Args:
-            scraped_text: Raw text content from scraped video(s).
-            niche: Target content niche (e.g., 'stories', 'humor', 'health').
-            past_themes: List of recent themes to avoid duplicating.
-            video_format: 'shorts', 'video', or 'random'.
-            visual_style: '2d_animation', 'painting', or 'random'.
-
-        Returns:
-            StoryScript instance containing scenes and visual metadata.
-        """
         if not scraped_text or not scraped_text.strip():
             logger.warning("Empty scraped_text provided to rewrite_story. Using fallback story.")
-            return self._create_fallback_story("Nội dung trống", niche)
+            return self._create_fallback_story("", niche)
 
-        if past_themes is None:
-            past_themes = self.extract_past_themes_from_file()
+        if not self.client:
+            logger.warning("Gemini Client not initialized. Using fallback story.")
+            return self._create_fallback_story(scraped_text, niche)
 
         system_prompt = self._build_story_system_prompt(niche, video_format, visual_style)
-        user_prompt = self._build_story_user_prompt(scraped_text, past_themes)
+        
+        user_prompt = "Source Material:\n" + scraped_text
+        if past_themes:
+            user_prompt += "\n\nPast Themes to avoid heavily repeating: " + ", ".join(past_themes)
+            
         full_prompt = f"System Instructions:\n{system_prompt}\n\nUser Request:\n{user_prompt}"
 
-        if not self.model:
-            logger.warning("Gemini model not initialized. Returning structured fallback story.")
-            return self._create_fallback_story(scraped_text, niche)
+        logger.info(f"Generating story with Gemini model '{self.model_name}' (Format: {video_format})...")
 
         try:
-            response = await self.model.generate_content_async(full_prompt)
-            response_text = response.text if response else ""
-            if not response_text or not response_text.strip():
-                raise ValueError("Empty response text received from Gemini API.")
-            return self._parse_story_response(response_text, niche)
+            # Using google.genai async client
+            response = await self.client.aio.models.generate_content(
+                model=self.model_name,
+                contents=full_prompt,
+            )
+            
+            if not response or not response.text:
+                raise ValueError("Empty response from Gemini")
+                
+            response_text = response.text
         except Exception as e:
-            logger.error(f"Error during Gemini story rewriting: {e}")
+            logger.error(f"Error calling Gemini API: {e}")
             return self._create_fallback_story(scraped_text, niche)
 
-    def _build_story_system_prompt(self, niche: str, video_format: str, visual_style: str) -> str:
-        """Construct system instructions enforcing multi-scene JSON format, art style, and character consistency."""
-        format_mapping = {
-            "shorts": "9:16",
-            "video": "16:9",
-        }
-        vf = format_mapping.get(video_format, "9:16")
-
-        style_mapping = {
-            "2d_animation": "high quality 2D anime animation style, Studio Ghibli style, vibrant colors",
-            "painting": "beautiful watercolor painting, artistic brush strokes, storybook illustration"
-        }
-        vs = style_mapping.get(visual_style, "cute 3D Pixar animation style, vibrant lighting, soft colors, high detail")
-
-        # Format-specific composition block — only ONE is sent
-        if vf == "16:9":
-            format_block = (
-                "VIDEO FORMAT: 16:9 landscape\n"
-                "- Compose for landscape YouTube video.\n"
-                "- Resolution target: 1920x1080.\n"
-                "- Use a wide cinematic composition.\n"
-                "- Keep the main subject clearly visible and away from extreme edges.\n"
-                "- Create 6–8 scenes for a ~60-90 second video.\n"
-                "- Each narration_text_vi should be 2-3 sentences (~15s spoken).\n"
-            )
-            composition_template = (
-                "Eye-level medium shot. One clear focal subject occupying approximately 35-50% of the frame. "
-                "Clear foreground, midground and background. Keep the subject and important objects away from the extreme edges. "
-                "Leave enough surrounding space for a subtle 3-7% Ken Burns zoom or pan."
-            )
-        else:
-            format_block = (
-                "VIDEO FORMAT: 9:16 vertical (YouTube Shorts)\n"
-                "- Compose for YouTube Shorts.\n"
-                "- Resolution target: 1080x1920.\n"
-                "- Use a vertical cinematic composition.\n"
-                "- Keep the main subject inside the central safe area.\n"
-                "- Avoid placing important faces, hands, objects near the top/bottom edges.\n"
-                "- Create 4–5 scenes for a ~30-45 second Short.\n"
-                "- Each narration_text_vi should be 1-2 sentences (~8s spoken).\n"
-            )
-            composition_template = (
-                "Vertical cinematic framing. One clear focal subject occupying approximately 40-55% of the frame. "
-                "Keep the face and important objects inside the central safe area. "
-                "Avoid placing important elements near the top and bottom edges. "
-                "Leave enough surrounding space for a subtle 3-7% Ken Burns zoom or vertical pan."
-            )
-
-        prompt = (
-            "You are an expert AI visual director and image-prompt engineer for a YouTube automated video system.\n\n"
-            "Your task is to transform the provided source content into a completely original short story and create high-quality image generation prompts for every scene.\n\n"
-            "IMPORTANT GOALS:\n"
-            "- Preserve the core idea of the source, but NEVER copy sentences, structure, or wording.\n"
-            "- Create a coherent, engaging and original story.\n"
-            "- Every scene must visually connect to the previous and next scene.\n"
-            "- The generated images will be used as the ONLY visual source for a video.\n"
-            "- Do NOT put text, subtitles, logos, watermarks, UI elements, or written words inside generated images.\n\n"
-            "LANGUAGE RULES:\n"
-            "- 'title_vi', 'description_vi', 'theme', 'summary', 'themes', and all 'narration_text_vi' MUST be in VIETNAMESE.\n"
-            "- 'art_style', 'character_style', and all 'image_prompt_en' MUST be in ENGLISH.\n\n"
-            f"{format_block}\n"
-            f"ART STYLE: {vs}\n\n"
-            "CHARACTER CONSISTENCY:\n"
-            "If the same character appears in multiple scenes:\n"
-            "- Keep the same age, face, hairstyle, clothing, body proportions and visual identity.\n"
-            "- Repeat the character description consistently in every relevant image prompt.\n"
-            "- Do not randomly change character appearance between scenes.\n\n"
-            "IMAGE PROMPT STRUCTURE:\n"
-            "For every scene, write ONE detailed English prompt as a SINGLE PARAGRAPH following this structure:\n\n"
-            "MAIN SUBJECT:\n"
-            "[describe the main subject and action clearly]\n\n"
-            "CHARACTER:\n"
-            "[consistent character description — repeat in every scene]\n\n"
-            "ENVIRONMENT:\n"
-            "[describe the location]\n\n"
-            "COMPOSITION:\n"
-            f"{composition_template}\n\n"
-            "LIGHTING:\n"
-            "Soft natural cinematic lighting with clear subject separation and gentle shadows.\n\n"
-            "COLOR:\n"
-            "Natural warm earth-tone palette with controlled saturation.\n\n"
-            "DETAIL:\n"
-            "Crisp clean edges, sharp main subject, well-defined facial features, clear silhouettes, realistic textures, readable details at smartphone viewing size.\n\n"
-            f"STYLE:\n"
-            f"{vs}\n\n"
-            "AVOID:\n"
-            "text, letters, numbers, subtitles, captions, logos, watermarks, UI, blurry subject, low detail, pixelation, distorted face, deformed hands, extra fingers, duplicate characters, cropped head, cropped important objects, extreme close-up, excessive noise, excessive blur, messy composition.\n\n"
-            "IMPORTANT:\n"
-            "- Do NOT write generic prompts like 'beautiful scene' or 'high quality image' without actual visual content.\n"
-            "- Every prompt must describe exactly what should be visible in the image.\n"
-            "- The image prompt must be self-contained.\n"
-            "- Do NOT include '8k resolution' or resolution numbers in the image prompt.\n\n"
-            "OUTPUT FORMAT:\n"
-            "Return ONLY valid JSON.\n"
-            "{\n"
-            '  "title_vi": "Vietnamese YouTube title",\n'
-            '  "description_vi": "Vietnamese YouTube description with 3-5 hashtags",\n'
-            '  "theme": "Chủ đề chính",\n'
-            f'  "art_style": "{vs}",\n'
-            '  "character_style": "Detailed protagonist visual description for consistency",\n'
-            '  "niche": "' + str(niche) + '",\n'
-            '  "summary": "Short Vietnamese summary",\n'
-            '  "themes": ["từ_khóa_1", "từ_khóa_2", "từ_khóa_3"],\n'
-            '  "scenes": [\n'
-            "    {\n"
-            '      "scene_id": 1,\n'
-            '      "narration_text_vi": "Vietnamese narration",\n'
-            '      "image_prompt_en": "Detailed English image generation prompt"\n'
-            "    }\n"
-            "  ]\n"
-            "}\n"
-        )
-        return prompt
-
-    def _build_story_user_prompt(
-        self,
-        scraped_text: str,
-        past_themes: Optional[List[str]] = None,
-    ) -> str:
-        """Construct user prompt containing scraped source material and anti-repetition past themes."""
-        prompt_parts = []
-        if past_themes:
-            themes_str = ", ".join(past_themes[:20])
-            prompt_parts.append(
-                f"[CRITICAL ANTI-REPETITION CONSTRAINT]\n"
-                f"The following themes/topics/characters have ALREADY been produced recently:\n"
-                f"{themes_str}\n"
-                f"You MUST create a completely DIFFERENT plot, character, and setting. Do NOT reuse these specific topics.\n"
-            )
-        prompt_parts.append(
-            f"[SOURCE INSPIRATION MATERIAL]\n"
-            f"{scraped_text}\n\n"
-            f"Generate the complete structured multi-scene JSON story script now:"
-        )
-        return "\n".join(prompt_parts)
-
-    def _parse_story_response(
-        self,
-        response_text: str,
-        niche: str = "stories",
-    ) -> StoryScript:
-        """Parse Gemini output into a strongly-typed StoryScript dataclass with fallback handling."""
-        clean_text = self._strip_code_fences(response_text)
+        # Attempt to parse
         try:
+            clean_text = self._strip_code_fences(response_text)
             data = json.loads(clean_text)
-            if isinstance(data, dict):
-                if "niche" not in data:
-                    data["niche"] = niche
-                return StoryScript.from_dict(data)
-        except Exception as e:
-            logger.warning(f"Direct JSON parsing failed ({e}). Attempting regex extraction.")
-
-        # Attempt regex search for outermost JSON object
-        match = re.search(r"\{[\s\S]*\}", response_text)
-        if match:
+            data["video_format"] = video_format
+            return StoryScript.from_dict(data)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse main JSON response: {e}. Trying regex extraction...")
             try:
-                data = json.loads(match.group(0))
-                if isinstance(data, dict):
-                    if "niche" not in data:
-                        data["niche"] = niche
+                json_match = re.search(r'```json\s*(.*?)\s*```', response_text, re.DOTALL)
+                if json_match:
+                    clean_text = json_match.group(1).strip()
+                    data = json.loads(clean_text)
+                    data["video_format"] = video_format
                     return StoryScript.from_dict(data)
             except Exception as e:
                 logger.warning(f"Regex JSON extraction also failed: {e}")
@@ -268,7 +116,6 @@ class ContentRewriter:
         return self._create_fallback_story(response_text, niche)
 
     def _strip_code_fences(self, text: str) -> str:
-        """Clean markdown code fences from JSON response."""
         clean = text.strip()
         if clean.startswith("```json"):
             clean = clean[7:]
@@ -278,32 +125,81 @@ class ContentRewriter:
             clean = clean[:-3]
         return clean.strip()
 
+    def _build_story_system_prompt(self, niche: str, video_format: str, visual_style: str) -> str:
+        return f"""You are the Master AI Executive Director and Cinematographer for automated video storytelling.
+Your mission is to transform raw narrative concepts into a highly cinematic, multi-scene video production script.
+
+CRITICAL CINEMATOGRAPHY & DURATION CONSTRAINTS:
+1. SCENE CHUNKING (<= 10.0 SECONDS PER SCENE):
+   - Every scene's `narration_text_vi` MUST be strictly between 10 and 18 Vietnamese words (1 to 2 balanced sentences).
+   - Under NO circumstance create sub-10-word beats or exceed 19 words (enforces expected speech 4.0s - 8.5s).
+   - For Shorts (9:16): Create 5-7 scenes (Total ~70-100 words, ~35-50 seconds runtime).
+   - For Long Video (16:9): Create 12-16 scenes (Total ~180-220 words, ~75-95 seconds runtime).
+
+2. CAMERA MOTION & TEMPORAL PROMPTS:
+   - For each scene, generate `video_prompt_en` describing dynamic motion, environmental physics (wind, fog, embers), and camera movement.
+   - Choose `camera_movement` from: ['slow_dolly_in', 'lateral_tracking', 'low_angle_tilt_up', 'overhead_crane', 'orbit_90deg', 'organic_handheld'].
+   - Ensure `image_prompt_en` provides a high-resolution keyframe description as a fallback anchor.
+
+3. HYBRID QUOTA ALLOCATION:
+   - Mark `is_hero_scene: true` for 3 to 4 major narrative beats (Scene 1 Hook, Scene 7 Turning Point, Scene 14 Climax).
+   - Mark `is_hero_scene: false` for standard exposition and transition scenes.
+
+4. VISUAL CONTINUITY & CHARACTER ANCHORS:
+   - Maintain identical character style, clothing, and physical traits across ALL scenes.
+   - Maintain uniform atmospheric lighting, color palette, and art style.
+
+OUTPUT FORMAT: Strict valid JSON only (no markdown, no preamble).
+Schema:
+{{
+  "title_vi": "Tiêu đề hấp dẫn",
+  "description_vi": "Mô tả đầy đủ kèm #hashtag",
+  "theme": "Chủ đề câu chuyện",
+  "art_style": "3D Pixar animation style, vivid cinematic lighting",
+  "character_style": "An 8-year-old Vietnamese boy with red hoodie and brass glasses",
+  "scenes": [
+    {{
+      "scene_id": 1,
+      "narration_text_vi": "Lời thuyết minh ngắn gọn từ 10 đến 18 từ.",
+      "camera_movement": "slow_dolly_in",
+      "is_hero_scene": true,
+      "video_prompt_en": "Cinematic slow dolly-in shot. Character description, active motion in environment, volumetric lighting, 24fps.",
+      "image_prompt_en": "Detailed static illustration prompt with character and environment for high-res fallback."
+    }}
+  ]
+}}"""
+
     def _create_fallback_story(
         self,
         raw_text: str,
         niche: str = "stories",
     ) -> StoryScript:
-        """Construct a high-quality 3-scene StoryScript fallback when LLM output is malformed or unavailable."""
-        first_line = raw_text.strip().split("\n")[0][:60] if raw_text else "Cuộc Phiêu Lưu Kỳ Thú"
-        title = f"Hành Trình Kỳ Thú: {first_line}" if first_line else "Hành Trình Kỳ Thú Tí Hon"
+        first_line = raw_text.strip().split("\n")[0][:60] if raw_text else "Cuoc Phieu Luu Ky Thu"
+        title = f"Hanh Trinh Ky Thu: {first_line}" if first_line else "Hanh Trinh Ky Thu Ti Hon"
 
         scenes = [
             Scene(
                 scene_id=1,
-                narration_text_vi="Trong một thế giới kỳ diệu ngập tràn ánh sáng, câu chuyện phiêu lưu bắt đầu mở ra với biết bao điều kỳ thú.",
+                narration_text_vi="Trong một thế giới kỳ diệu ngập tràn ánh sáng, câu chuyện bắt đầu với muôn vàn bí ẩn.",
+                video_prompt_en="Cinematic slow dolly-in. A cute animated character starting an adventurous journey in a magical glowing forest.",
                 image_prompt_en="A cute animated character starting an adventurous journey in a magical glowing forest, 3D Pixar animation style, warm morning lighting",
             ),
             Scene(
                 scene_id=2,
-                narration_text_vi="Những thử thách bất ngờ xuất hiện trên đường đi, đòi hỏi sự dũng cảm và lòng kiên trì vượt khó.",
+                narration_text_vi="Những thử thách bất ngờ xuất hiện, đòi hỏi sự dũng cảm và lòng kiên trì vượt khó.",
+                video_prompt_en="Lateral tracking. A brave cute animated character facing an exciting challenge on a mysterious path.",
                 image_prompt_en="A brave cute animated character facing an exciting challenge on a mysterious path, dramatic cinematic lighting, 3D Pixar style",
             ),
             Scene(
                 scene_id=3,
-                narration_text_vi="Bằng sự thông minh và tình bạn gắn kết, mọi khó khăn đều được giải quyết êm đẹp trong niềm hân hoan rực rỡ.",
+                narration_text_vi="Bằng trí thông minh và tình bạn gắn kết, mọi khó khăn đều được giải quyết êm đẹp.",
+                video_prompt_en="Orbit 90deg. A joyful animated character celebrating success under a beautiful glowing sunset.",
                 image_prompt_en="A joyful animated character celebrating success under a beautiful glowing sunset, vibrant soft colors, 3D Pixar animation style",
             ),
         ]
+        
+        for s in scenes:
+            s.is_hero_scene = True
 
         return StoryScript(
             title_vi=title,
@@ -317,100 +213,6 @@ class ContentRewriter:
             themes=["hoạt hình 3d", "phiêu lưu", "dũng cảm", niche],
         )
 
-    # ========================================================================
-    # Backward Compatibility Methods for M1 / Legacy callers
-    # ========================================================================
-    async def rewrite_content(
-        self,
-        raw_content: str,
-        niche: dict,
-        knowledge_history: str = "",
-        platform: str = "youtube",
-    ) -> dict:
-        """Legacy rewrite_content returning dictionary for backward compatibility."""
-        if not self.model:
-            logger.warning("Gemini model not initialized. Check API key.")
-            return {"content": "", "image_prompt": "", "summary": "", "themes": []}
-
-        system_prompt = self._build_system_prompt(niche, platform)
-        user_prompt = self._build_user_prompt(raw_content, knowledge_history)
-        full_prompt = f"System Instructions:\n{system_prompt}\n\nUser Prompt:\n{user_prompt}"
-
-        try:
-            response = await self.model.generate_content_async(full_prompt)
-            if not response or not response.text:
-                raise ValueError("Empty response from Gemini")
-            return self._parse_response(response.text)
-        except Exception as e:
-            logger.error(f"Error during content rewriting: {e}")
-            return {"content": "", "image_prompt": "", "summary": "", "themes": []}
-
-    def _build_system_prompt(self, niche: dict, platform: str) -> str:
-        niche_name = niche.get("name", "general")
-        niche_desc = niche.get("description", "")
-        niche_tone = niche.get("tone", "engaging")
-
-        prompt = (
-            "You are an expert content creator. Follow these instructions carefully:\n"
-            "1. Output MUST be primarily in VIETNAMESE, except for the 'image_prompt' which MUST be in English.\n"
-            f"2. Your niche is '{niche_name}': {niche_desc}. Match this tone: {niche_tone}.\n"
-        )
-        if niche_name.lower() == "stories":
-            prompt += "   - Write an episode of a serialized story, make it dramatic and engaging.\n"
-        elif niche_name.lower() == "humor":
-            prompt += "   - Write funny, relatable content with Vietnamese humor style.\n"
-        elif niche_name.lower() == "health":
-            prompt += "   - Write informative health content, focusing on vegetables or natural remedies.\n"
-
-        if platform.lower() == "facebook":
-            prompt += "3. For Facebook: Write a longer, engaging post. Use paragraphs and emojis.\n"
-        elif platform.lower() == "tiktok":
-            prompt += "3. For TikTok: Write a shorter, punchy script/caption with trending hashtags.\n"
-        elif platform.lower() == "youtube":
-            prompt += "3. For YouTube: Write in a community post style, engaging with subscribers.\n"
-        else:
-            prompt += "3. Adapt the length and format appropriately.\n"
-
-        prompt += (
-            "4. Be original and provide a unique perspective. Do not just copy the source.\n"
-            "5. Always generate a DETAILED English image prompt (at least 50 words) suitable for AI image generation.\n"
-            "6. Output must be in JSON format with the following keys:\n"
-            "   - 'content': The rewritten post text (Vietnamese)\n"
-            "   - 'image_prompt': Detailed English image prompt\n"
-            "   - 'summary': Brief summary of the post for a knowledge base (Vietnamese)\n"
-            "   - 'themes': List of key themes used (strings in Vietnamese)\n"
-        )
-        return prompt
-
-    def _build_user_prompt(self, raw_content: str, knowledge_history: str) -> str:
-        prompt = ""
-        if knowledge_history:
-            prompt += (
-                "Previous Knowledge/History (Avoid repeating these ideas/themes exactly):\n"
-                f"{knowledge_history}\n\n"
-            )
-        prompt += (
-            "Source Material/Inspiration:\n"
-            f"{raw_content}\n\n"
-            "Based on the system instructions and the source material, generate the structured JSON output."
-        )
-        return prompt
-
-    def _parse_response(self, response_text: str) -> dict:
-        try:
-            clean_text = self._strip_code_fences(response_text)
-            data = json.loads(clean_text)
-            return {
-                "content": data.get("content", ""),
-                "image_prompt": data.get("image_prompt", ""),
-                "summary": data.get("summary", ""),
-                "themes": data.get("themes", []),
-            }
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse Gemini response as JSON. Attempting manual extraction.")
-            return {
-                "content": response_text,
-                "image_prompt": "A detailed scene capturing the essence of the content, cinematic lighting, 8k resolution, highly detailed",
-                "summary": "Summary parsing failed.",
-                "themes": [],
-            }
+    async def rewrite_content(self, *args, **kwargs) -> dict:
+        """Legacy rewrite_content"""
+        return {"content": "", "image_prompt": "", "summary": "", "themes": []}

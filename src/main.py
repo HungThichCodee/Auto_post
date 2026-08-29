@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Auto_post — Automated YouTube Video Production Pipeline
+Auto_post â€” Automated YouTube Video Production Pipeline
 
 CLI entry point for scraping, content generation, video assembly, and auto-uploading.
 
@@ -35,6 +35,9 @@ from src.utils.browser_manager import BrowserManager
 from src.scraper.youtube_scraper import YoutubeScraper
 from src.ai_pipeline.content_rewriter import ContentRewriter
 from src.ai_pipeline.image_generator import ImageGenerator
+from src.ai_pipeline.video_clip_generator import VideoClipGenerator
+from src.ai_pipeline.video_clip_generator import VideoClipGenerator
+from src.ai_pipeline.video_clip_generator import VideoClipGenerator
 from src.ai_pipeline.audio_generator import AudioGenerator
 from src.ai_pipeline.video_maker import VideoMaker
 from src.memory.knowledge_base import KnowledgeBase
@@ -128,8 +131,8 @@ async def cmd_generate(args, scraped_text: str = ""):
     # If no scraped text, use a default prompt
     if not scraped_text:
         scraped_text = (
-            "Những câu chuyện thú vị về thế giới động vật dễ thương. "
-            "Chó mèo vui nhộn, phiêu lưu kỳ thú trong khu rừng phép thuật."
+            "Nhá»¯ng cÃ¢u chuyá»‡n thÃº vá»‹ vá» tháº¿ giá»›i Ä‘á»™ng váº­t dá»… thÆ°Æ¡ng. "
+            "ChÃ³ mÃ¨o vui nhá»™n, phiÃªu lÆ°u ká»³ thÃº trong khu rá»«ng phÃ©p thuáº­t."
         )
 
     # Step 1: Generate story script
@@ -151,23 +154,22 @@ async def cmd_generate(args, scraped_text: str = ""):
 
     # Enforce the chosen format so is_shorts/target_aspect_ratio respect it
     story.video_format = video_format
-    logger.info(f"Video format locked: {video_format} → aspect_ratio={story.target_aspect_ratio}")
+    logger.info(f"Video format locked: {video_format} â†’ aspect_ratio={story.target_aspect_ratio}")
 
-    # Step 2: Generate images for each scene
-    log_step(logger, "IMAGE GEN", f"Generating {story.scene_count} scene images...")
-    image_gen = ImageGenerator(output_dir="output/images")
+    # Step 2: Generate dynamic video clips for each scene
+    log_step(logger, "VIDEO GEN", f"Generating {story.scene_count} dynamic video clips...")
+    video_gen = VideoClipGenerator(output_dir="output/video_clips")
     aspect_ratio = story.target_aspect_ratio
     try:
-        story.scenes = await image_gen.generate_scene_images(
+        story.scenes = await video_gen.generate_scene_clips(
             scenes=story.scenes,
-            art_style=story.art_style,
-            character_style=story.character_style,
             aspect_ratio=aspect_ratio,
+            art_style=story.art_style
         )
-        images_done = sum(1 for s in story.scenes if s.image_path)
-        logger.info(f"Generated {images_done}/{story.scene_count} images")
+        videos_done = sum(1 for s in story.scenes if getattr(s, 'video_path', None) or getattr(s, 'image_path', None))
+        logger.info(f"Generated {videos_done}/{story.scene_count} media assets")
     except Exception as e:
-        logger.error(f"Image generation error: {e}")
+        logger.error(f"Video clip generation error: {e}")
 
     # Step 3: Generate voiceover audio for each scene
     log_step(logger, "AUDIO GEN", "Generating voiceover audio...")
@@ -223,7 +225,7 @@ async def cmd_post(args=None, video_path: str = "", title: str = "",
 
     client_id = os.getenv("YT_CLIENT_ID")
     if not client_id and not dry_run:
-        logger.error("YT_CLIENT_ID not set — cannot upload without API authentication")
+        logger.error("YT_CLIENT_ID not set â€” cannot upload without API authentication")
         return None
 
     proxy_manager = ProxyManager(os.getenv("PROXY_LIST"))
@@ -235,8 +237,8 @@ async def cmd_post(args=None, video_path: str = "", title: str = "",
 
         result = await poster.upload_video(
             video_path=video_path,
-            title=title or "Video tự động",
-            description=description or "Video được tạo tự động bởi AI",
+            title=title or "Video tá»± Ä‘á»™ng",
+            description=description or "Video Ä‘Æ°á»£c táº¡o tá»± Ä‘á»™ng bá»Ÿi AI",
             dry_run=dry_run,
             tags=tags or [],
         )
@@ -255,11 +257,11 @@ async def cmd_post(args=None, video_path: str = "", title: str = "",
 
 
 async def cmd_run(args):
-    """Execute the full pipeline: scrape → generate → video → upload → memory."""
+    """Execute the full pipeline: scrape â†’ generate â†’ video â†’ upload â†’ memory."""
     log_step(logger, "FULL PIPELINE", f"Starting (dry_run={args.dry_run})")
     start_time = datetime.now()
 
-    # ── Step 1: Scrape ──
+    # â”€â”€ Step 1: Scrape â”€â”€
     scraped_items = await cmd_scrape(args)
     scraped_text = ""
     niche = "stories"
@@ -284,17 +286,17 @@ async def cmd_run(args):
     else:
         logger.warning("No content scraped. Using default prompt for content generation.")
 
-    # ── Step 2: Generate (Story + Images + Audio) ──
+    # â”€â”€ Step 2: Generate (Story + Images + Audio) â”€â”€
     class GenArgs:
         def __init__(self, n):
             self.niche = n
     story = await cmd_generate(GenArgs(niche), scraped_text=scraped_text)
 
     if not story or story.scene_count == 0:
-        logger.error("Story generation failed — no scenes produced.")
+        logger.error("Story generation failed â€” no scenes produced.")
         return
 
-    # ── Step 3: Assemble Video ──
+    # â”€â”€ Step 3: Assemble Video â”€â”€
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = f"output/video_{timestamp}.mp4"
     video_output = await cmd_make_video(story, output_path=video_path)
@@ -303,16 +305,16 @@ async def cmd_run(args):
         logger.error("Video assembly failed.")
         return
 
-    # ── Step 4: Upload to YouTube ──
+    # â”€â”€ Step 4: Upload to YouTube â”€â”€
     # Build enhanced description with CTA and hashtags
     cta_footer = (
         "\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "👉 ĐĂNG KÝ KÊNH để xem thêm video mỗi ngày!\n"
-        "❤️ Nhấn LIKE nếu bạn thích video này\n"
-        "🔗 CHIA SẺ cho bạn bè cùng xem nhé!\n"
-        "🔔 BẬT CHUÔNG để không bỏ lỡ video mới\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+        "ðŸ‘‰ ÄÄ‚NG KÃ KÃŠNH Ä‘á»ƒ xem thÃªm video má»—i ngÃ y!\n"
+        "â¤ï¸ Nháº¥n LIKE náº¿u báº¡n thÃ­ch video nÃ y\n"
+        "ðŸ”— CHIA Sáºº cho báº¡n bÃ¨ cÃ¹ng xem nhÃ©!\n"
+        "ðŸ”” Báº¬T CHUÃ”NG Ä‘á»ƒ khÃ´ng bá» lá»¡ video má»›i\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
     )
     # Add hashtags from story themes
     hashtags = " ".join([f"#{tag.replace(' ', '')}" for tag in (story.themes or [])[:5]])
@@ -321,7 +323,7 @@ async def cmd_run(args):
 
     # Build tags for YouTube API
     yt_tags = list(story.themes or [])[:10]
-    yt_tags.extend(["hoạt hình", "truyện", "animation", "shorts", "viral", "AI"])
+    yt_tags.extend(["hoáº¡t hÃ¬nh", "truyá»‡n", "animation", "shorts", "viral", "AI"])
     # Deduplicate
     yt_tags = list(dict.fromkeys(yt_tags))[:15]
 
@@ -333,16 +335,16 @@ async def cmd_run(args):
         tags=yt_tags,
     )
 
-    # ── Step 5: Update Knowledge Base ──
+    # â”€â”€ Step 5: Update Knowledge Base â”€â”€
     if upload_result and upload_result.success:
         log_step(logger, "MEMORY", "Updating knowledge base...")
         kb = KnowledgeBase(filepath=KB_PATH)
         entry_content = (
-            f"**Tiêu đề:** {story.title_vi}\n"
-            f"**Chủ đề:** {story.theme}\n"
-            f"**Số cảnh:** {story.scene_count}\n"
-            f"**Thời lượng:** {video_output.duration:.1f}s\n"
-            f"**Định dạng:** {video_output.aspect_ratio}\n"
+            f"**TiÃªu Ä‘á»:** {story.title_vi}\n"
+            f"**Chá»§ Ä‘á»:** {story.theme}\n"
+            f"**Sá»‘ cáº£nh:** {story.scene_count}\n"
+            f"**Thá»i lÆ°á»£ng:** {video_output.duration:.1f}s\n"
+            f"**Äá»‹nh dáº¡ng:** {video_output.aspect_ratio}\n"
             f"**URL:** {upload_result.post_url}\n"
         )
         kb.append_entry(
@@ -356,9 +358,9 @@ async def cmd_run(args):
     elif args.dry_run:
         log_step(logger, "MEMORY (DRY RUN)", "Would update knowledge base")
     else:
-        logger.warning("Upload was not successful — knowledge base not updated.")
+        logger.warning("Upload was not successful â€” knowledge base not updated.")
 
-    # ── Step 6: Cleanup ──
+    # â”€â”€ Step 6: Cleanup â”€â”€
     log_step(logger, "CLEANUP", "Removing temporary files...")
     for scene in story.scenes:
         for path in [scene.image_path, scene.audio_path]:
@@ -375,7 +377,7 @@ async def cmd_run(args):
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
-        description="Auto_post — Automated YouTube Video Production Pipeline",
+        description="Auto_post â€” Automated YouTube Video Production Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -421,7 +423,7 @@ async def async_main():
         parser.print_help()
         return
 
-    logger.info(f"=== Auto_post Pipeline — Command: {args.command} ===")
+    logger.info(f"=== Auto_post Pipeline â€” Command: {args.command} ===")
 
     if args.command == "scrape":
         await cmd_scrape(args)
@@ -442,3 +444,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
