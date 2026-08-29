@@ -91,3 +91,9 @@ This file records all generated and posted content to maintain consistency and a
 - **Post URL**: https://youtu.be/sOdWHnz4YGc
 ---
 
+### 2026-08-29 23:29:21 | youtube | Quyền lực, công lý và sự trở về của thiên kim gia tộc
+- **Summary**: Thiên Kim Trở Về: Nữ Hoàng Băng Giá
+- **Themes**: 
+- **Post URL**: https://youtu.be/y5ao5ABer3Y
+---
+
