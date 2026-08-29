@@ -75,6 +75,7 @@ class YoutubePoster(BasePoster):
         title: str,
         description: str,
         dry_run: bool = False,
+        tags: list = None,
     ) -> PostResult:
         """
         Upload a video to YouTube via the official API.
@@ -89,12 +90,24 @@ class YoutubePoster(BasePoster):
             self.youtube = self._get_authenticated_service()
             self.logger.info("Successfully authenticated with YouTube API.")
 
+            snippet = {
+                "title": title[:100],
+                "description": description[:5000],
+                "categoryId": "24",  # 24 is Entertainment
+            }
+            if tags:
+                # YouTube allows max 500 chars total for tags
+                valid_tags = []
+                total_len = 0
+                for tag in tags:
+                    tag = str(tag).strip()
+                    if tag and total_len + len(tag) + 1 <= 500:
+                        valid_tags.append(tag)
+                        total_len += len(tag) + 1
+                snippet["tags"] = valid_tags
+
             body = {
-                "snippet": {
-                    "title": title[:100],
-                    "description": description[:5000],
-                    "categoryId": "24",  # 24 is Entertainment
-                },
+                "snippet": snippet,
                 "status": {
                     "privacyStatus": "public",
                     "selfDeclaredMadeForKids": False,

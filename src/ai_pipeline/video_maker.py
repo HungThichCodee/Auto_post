@@ -84,6 +84,16 @@ class VideoMaker:
         if not scene_clips:
             raise ValueError("No scene clips could be created.")
 
+        # Create outro CTA clip
+        try:
+            outro = self._create_outro_clip(
+                target_res, TextClip, ColorClip, CompositeVideoClip
+            )
+            scene_clips.append(outro)
+            logger.info("Outro CTA clip added (3s)")
+        except Exception as e:
+            logger.warning(f"Outro creation failed: {e}. Skipping.")
+
         # Concatenate all clips
         logger.info("Concatenating scene clips...")
         final = concatenate_videoclips(scene_clips, method="compose")
@@ -166,8 +176,8 @@ class VideoMaker:
         """Apply Ken Burns (slow zoom/pan) effect on an image clip."""
         w, h = target_res
 
-        # Scale image larger than target to allow zoom/pan
-        scale_factor = 1.2
+        # Scale image slightly larger than target to allow zoom/pan
+        scale_factor = 1.08
 
         # Resize image to fill target with extra margin
         clip = clip.resize(height=int(h * scale_factor))
@@ -181,7 +191,7 @@ class VideoMaker:
             # Start wide, end tight
             def zoom_in_effect(get_frame, t):
                 progress = t / duration if duration > 0 else 0
-                current_scale = 1.0 + progress * 0.15  # 1.0 -> 1.15
+                current_scale = 1.0 + progress * 0.06  # 1.0 -> 1.06
                 new_w = int(w / current_scale)
                 new_h = int(h / current_scale)
                 cx, cy = clip.w // 2, clip.h // 2
@@ -199,7 +209,7 @@ class VideoMaker:
         elif effect == "zoom_out":
             def zoom_out_effect(get_frame, t):
                 progress = t / duration if duration > 0 else 0
-                current_scale = 1.15 - progress * 0.15  # 1.15 -> 1.0
+                current_scale = 1.06 - progress * 0.06  # 1.06 -> 1.0
                 new_w = int(w / current_scale)
                 new_h = int(h / current_scale)
                 cx, cy = clip.w // 2, clip.h // 2
@@ -245,7 +255,7 @@ class VideoMaker:
         w, h = target_res
 
         # Wrap long text
-        max_chars_per_line = 35 if w < h else 50  # Shorter lines for vertical video
+        max_chars_per_line = 30 if w < h else 45  # Shorter lines for vertical video
         words = text.split()
         lines = []
         current_line = ""
@@ -260,15 +270,15 @@ class VideoMaker:
             lines.append(current_line)
         wrapped_text = "\n".join(lines[:3])  # Max 3 lines
 
-        # Create text clip
-        fontsize = 36 if w < h else 44
+        # Create text clip — use Noto Sans CJK (installed via fonts-noto-cjk on Ubuntu)
+        fontsize = 48 if w < h else 52
         txt_clip = TextClip(
             wrapped_text,
             fontsize=fontsize,
             color="white",
-            font="Arial-Bold",
+            font="Noto-Sans-CJK-JP-Bold",
             stroke_color="black",
-            stroke_width=2,
+            stroke_width=3,
             method="caption",
             size=(int(w * 0.9), None),
             align="center",
@@ -276,15 +286,62 @@ class VideoMaker:
 
         # Position text at bottom with padding
         txt_h = txt_clip.h
-        bar_height = txt_h + 30
-        y_pos = h - bar_height - 20
+        bar_height = txt_h + 40
+        y_pos = h - bar_height - 25
 
         # Semi-transparent background bar
         bg_bar = ColorClip(
             size=(w, bar_height),
             color=(0, 0, 0),
-        ).set_opacity(0.6).set_duration(duration).set_position((0, y_pos))
+        ).set_opacity(0.7).set_duration(duration).set_position((0, y_pos))
 
-        txt_clip = txt_clip.set_position(("center", y_pos + 15))
+        txt_clip = txt_clip.set_position(("center", y_pos + 20))
 
         return CompositeVideoClip([clip, bg_bar, txt_clip], size=(w, h))
+
+    def _create_outro_clip(
+        self, target_res: Tuple[int, int],
+        TextClip, ColorClip, CompositeVideoClip
+    ):
+        """Create a 3-second outro clip with CTA text on dark background."""
+        w, h = target_res
+        outro_duration = 3.0
+
+        # Dark background
+        bg = ColorClip(size=(w, h), color=(15, 15, 25)).set_duration(outro_duration)
+
+        # Main CTA text
+        cta_text = "ĐĂNG KÝ KÊNH 🔔\nLIKE 👍 • CHIA SẺ 🔗"
+        fontsize_main = 52 if w < h else 56
+
+        cta_clip = TextClip(
+            cta_text,
+            fontsize=fontsize_main,
+            color="white",
+            font="Noto-Sans-CJK-JP-Bold",
+            stroke_color="black",
+            stroke_width=2,
+            method="caption",
+            size=(int(w * 0.85), None),
+            align="center",
+        ).set_duration(outro_duration).set_position("center")
+
+        # Sub text
+        sub_text = "Cảm ơn bạn đã xem! ❤️"
+        fontsize_sub = 32 if w < h else 36
+
+        sub_clip = TextClip(
+            sub_text,
+            fontsize=fontsize_sub,
+            color="#AAAAAA",
+            font="Noto-Sans-CJK-JP-Bold",
+            method="caption",
+            size=(int(w * 0.8), None),
+            align="center",
+        ).set_duration(outro_duration)
+
+        # Position sub text below center
+        sub_y = (h // 2) + 80
+        sub_clip = sub_clip.set_position(("center", sub_y))
+
+        return CompositeVideoClip([bg, cta_clip, sub_clip], size=(w, h))

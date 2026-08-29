@@ -207,7 +207,8 @@ async def cmd_make_video(story: StoryScript, output_path: str = "output/final_vi
 
 
 async def cmd_post(args=None, video_path: str = "", title: str = "",
-                   description: str = "", dry_run: bool = False):
+                   description: str = "", dry_run: bool = False,
+                   tags: list = None):
     """Upload video to YouTube."""
     log_step(logger, "UPLOAD", f"Uploading to YouTube (dry_run={dry_run})")
 
@@ -237,6 +238,7 @@ async def cmd_post(args=None, video_path: str = "", title: str = "",
             title=title or "Video tự động",
             description=description or "Video được tạo tự động bởi AI",
             dry_run=dry_run,
+            tags=tags or [],
         )
 
         if result.success:
@@ -302,11 +304,33 @@ async def cmd_run(args):
         return
 
     # ── Step 4: Upload to YouTube ──
+    # Build enhanced description with CTA and hashtags
+    cta_footer = (
+        "\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "👉 ĐĂNG KÝ KÊNH để xem thêm video mỗi ngày!\n"
+        "❤️ Nhấn LIKE nếu bạn thích video này\n"
+        "🔗 CHIA SẺ cho bạn bè cùng xem nhé!\n"
+        "🔔 BẬT CHUÔNG để không bỏ lỡ video mới\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    )
+    # Add hashtags from story themes
+    hashtags = " ".join([f"#{tag.replace(' ', '')}" for tag in (story.themes or [])[:5]])
+    base_hashtags = "#shorts #hoathinh #truyen #viral #animation"
+    full_description = f"{story.description_vi}{cta_footer}\n{hashtags} {base_hashtags}"
+
+    # Build tags for YouTube API
+    yt_tags = list(story.themes or [])[:10]
+    yt_tags.extend(["hoạt hình", "truyện", "animation", "shorts", "viral", "AI"])
+    # Deduplicate
+    yt_tags = list(dict.fromkeys(yt_tags))[:15]
+
     upload_result = await cmd_post(
         video_path=video_output.video_path,
         title=story.title_vi,
-        description=story.description_vi,
+        description=full_description,
         dry_run=args.dry_run,
+        tags=yt_tags,
     )
 
     # ── Step 5: Update Knowledge Base ──

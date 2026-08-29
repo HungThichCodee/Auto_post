@@ -166,6 +166,23 @@ class ImageGenerator:
                     temp_file = filepath.with_suffix(".tmp")
                     with open(temp_file, "wb") as f:
                         f.write(image_data)
+
+                    # Validate and upscale if Pollinations returned smaller than requested
+                    try:
+                        img = Image.open(temp_file)
+                        actual_w, actual_h = img.size
+                        if actual_w < width * 0.9 or actual_h < height * 0.9:
+                            logger.warning(
+                                f"Image undersized: {actual_w}x{actual_h} vs requested {width}x{height}. "
+                                f"Upscaling with LANCZOS..."
+                            )
+                            img = img.resize((width, height), Image.LANCZOS)
+                            img.save(temp_file, "PNG", quality=95)
+                            logger.info(f"Image upscaled to {width}x{height}")
+                        img.close()
+                    except Exception as resize_err:
+                        logger.warning(f"Image resize check failed: {resize_err}")
+
                     if temp_file.exists():
                         if filepath.exists():
                             filepath.unlink()
