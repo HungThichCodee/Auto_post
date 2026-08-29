@@ -1,4 +1,4 @@
-﻿"""
+"""
 src/ai_pipeline/video_clip_generator.py
 High-performance asynchronous video clip synthesis engine supporting Hugging Face ZeroGPU Spaces,
 Pollinations.ai Video REST endpoints, local quantized models, and resilient 2.5D fallbacks.
@@ -47,6 +47,7 @@ class VideoClipGenerator:
         self.semaphore = asyncio.Semaphore(concurrency_limit)
         self.max_cloud_video_scenes = max_cloud_video_scenes
         self._cloud_video_count = 0
+        self._quota_lock = asyncio.Lock()
         logger.info(f"VideoClipGenerator initialized (Output: {self.output_dir}, Concurrency: {concurrency_limit})")
 
     async def generate_scene_clips(

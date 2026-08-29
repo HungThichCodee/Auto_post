@@ -361,14 +361,30 @@ async def cmd_run(args):
         logger.warning("Upload was not successful â€” knowledge base not updated.")
 
     # â”€â”€ Step 6: Cleanup â”€â”€
-    log_step(logger, "CLEANUP", "Removing temporary files...")
+        log_step(logger, "CLEANUP", "Removing temporary files...")
+    # Remove individual scene assets
     for scene in story.scenes:
-        for path in [scene.image_path, scene.audio_path]:
+        for path in [getattr(scene, 'image_path', None), getattr(scene, 'audio_path', None), getattr(scene, 'video_path', None)]:
             if path and os.path.exists(path):
                 try:
                     os.remove(path)
                 except Exception:
                     pass
+                    
+    # Remove synced/subtitled intermediate MP4s in output/assets
+    import glob
+    intermediate_files = glob.glob("output/assets/synced_scene_*.mp4") + \
+                         glob.glob("output/assets/subtitled_scene_*.mp4") + \
+                         glob.glob("output/assets/outro_scene.mp4") + \
+                         glob.glob("output/assets/scenes_list.txt") + \
+                         glob.glob("output/video_clips/scene_*_clip.mp4")
+                         
+    for f in intermediate_files:
+        if os.path.exists(f):
+            try:
+                os.remove(f)
+            except Exception:
+                pass
 
     elapsed = (datetime.now() - start_time).total_seconds()
     log_step(logger, "PIPELINE COMPLETE", f"Total time: {elapsed:.0f}s")

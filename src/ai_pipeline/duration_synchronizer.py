@@ -1,4 +1,4 @@
-﻿"""
+"""
 src/ai_pipeline/duration_synchronizer.py
 Deterministic, zero-drift Audio-Video Duration Synchronization Engine.
 """
@@ -144,7 +144,7 @@ class DurationSynchronizer:
                 f"[rev_in]reverse[rev];"
                 f"[fwd][rev]concat=n=2:v=1:a=0[pp];"
                 f"[pp]split=2[pp_main][pp_last];"
-                f"[pp_last]trim=start_frame=-1,setpts=PTS-STARTPTS,loop=loop={int(pad_dur*30)}:size=1:start=0,"
+                f"[pp_last]trim=start={max(0, (2 * v_dur) - 0.05):.2f},setpts=PTS-STARTPTS,loop=loop={int(pad_dur*30)}:size=1:start=0,"
                 f"zoompan=z='min(zoom+0.0015,1.06)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={w}x{h}:fps=30[pp_pad];"
                 f"[pp_main][pp_pad]concat=n=2:v=1:a=0,trim=0:{t_target},setpts=PTS-STARTPTS[vout]"
             )
@@ -161,8 +161,12 @@ class DurationSynchronizer:
             out_path
         ]
 
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _, stderr = await proc.communicate()
+                proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+        except asyncio.TimeoutError:
+            proc.kill()
+            raise RuntimeError("FFmpeg sync timeout after 300s")
         if proc.returncode != 0:
             raise RuntimeError(f"FFmpeg sync error: {stderr.decode()}")
 

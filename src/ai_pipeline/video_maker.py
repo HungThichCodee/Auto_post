@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import logging
 import os
 import random
@@ -87,8 +87,12 @@ class VideoMaker:
                 "-c", "copy",
                 output_path
             ]
-            proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            _, stderr = await proc.communicate()
+                        proc = await asyncio.create_subprocess_exec(*cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                _, stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
+            except asyncio.TimeoutError:
+                proc.kill()
+                raise RuntimeError("FFmpeg assembly timeout after 600s")
             if proc.returncode != 0:
                 logger.error(f"FFmpeg concat failed: {stderr.decode()}")
         else:
@@ -172,7 +176,7 @@ class VideoMaker:
                 img_clip = MoviePyAdapter.time_transform(img_clip, zoom_out_effect)
 
             img_clip = MoviePyAdapter.set_audio(img_clip, audio)
-            img_clip.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", logger=None)
+            img_clip.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", ffmpeg_params=["-crf", "18", "-pix_fmt", "yuv420p", "-ar", "48000", "-ac", "2", "-b:a", "192k"], logger=None)
             img_clip.close()
             audio.close()
             
@@ -231,7 +235,7 @@ class VideoMaker:
                 logger.warning(f"TextClip failed: {e}. Outputting without subtitles.")
                 final = clip
                 
-            final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", logger=None)
+            final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", ffmpeg_params=["-crf", "18", "-pix_fmt", "yuv420p", "-ar", "48000", "-ac", "2", "-b:a", "192k"], logger=None)
             final.close()
             clip.close()
 
@@ -268,7 +272,7 @@ class VideoMaker:
             silence_audio = AudioClip(lambda t: [0, 0] if MOVIEPY_V2 else 0, duration=duration, fps=48000)
             final = MoviePyAdapter.set_audio(final, silence_audio)
             
-            final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", logger=None)
+            final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac", preset="fast", ffmpeg_params=["-crf", "18", "-pix_fmt", "yuv420p", "-ar", "48000", "-ac", "2", "-b:a", "192k"], logger=None)
             final.close()
 
         await asyncio.to_thread(_process)

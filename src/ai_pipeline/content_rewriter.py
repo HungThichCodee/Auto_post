@@ -1,4 +1,4 @@
-﻿"""
+"""
 src/ai_pipeline/content_rewriter.py
 Gemini 2.0 Flash AI multi-scene story rewriter and prompt engineering module.
 """
@@ -100,7 +100,15 @@ class ContentRewriter:
             clean_text = self._strip_code_fences(response_text)
             data = json.loads(clean_text)
             data["video_format"] = video_format
-            return StoryScript.from_dict(data)
+            story_obj = StoryScript.from_dict(data)
+            # Validation: ensure word counts fall within 10-18 words to prevent TTS drift
+            for s in story_obj.scenes:
+                words = s.narration_text_vi.split()
+                if len(words) < 10:
+                    logger.warning(f"Scene {s.scene_id} is too short ({len(words)} words). Pad recommended.")
+                elif len(words) > 18:
+                    logger.warning(f"Scene {s.scene_id} is too long ({len(words)} words). Trim recommended.")
+            return story_obj
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse main JSON response: {e}. Trying regex extraction...")
             try:
@@ -109,7 +117,15 @@ class ContentRewriter:
                     clean_text = json_match.group(1).strip()
                     data = json.loads(clean_text)
                     data["video_format"] = video_format
-                    return StoryScript.from_dict(data)
+                    story_obj = StoryScript.from_dict(data)
+            # Validation: ensure word counts fall within 10-18 words to prevent TTS drift
+            for s in story_obj.scenes:
+                words = s.narration_text_vi.split()
+                if len(words) < 10:
+                    logger.warning(f"Scene {s.scene_id} is too short ({len(words)} words). Pad recommended.")
+                elif len(words) > 18:
+                    logger.warning(f"Scene {s.scene_id} is too long ({len(words)} words). Trim recommended.")
+            return story_obj
             except Exception as e:
                 logger.warning(f"Regex JSON extraction also failed: {e}")
 
