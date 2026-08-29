@@ -1,4 +1,4 @@
-﻿"""
+"""
 src/ai_pipeline/moviepy_adapter.py
 Universal cross-version adapter supporting MoviePy 1.x and MoviePy 2.x.
 """
@@ -79,11 +79,15 @@ class MoviePyAdapter:
         return clip.set_fps(fps)
 
     @staticmethod
-    def resize(clip: Any, newsize: Union[float, Tuple[int, int]]) -> Any:
+    def resize(clip: Any, newsize: Union[float, Tuple[int, int], None] = None, **kwargs) -> Any:
         if hasattr(clip, "resized"):
-            return clip.resized(newsize)
+            if newsize is not None:
+                return clip.resized(newsize)
+            return clip.resized(**kwargs)
         if hasattr(clip, "resize"):
-            return clip.resize(newsize)
+            if newsize is not None:
+                return clip.resize(newsize)
+            return clip.resize(**kwargs)
         return clip
 
     @staticmethod
