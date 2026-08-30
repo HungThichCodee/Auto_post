@@ -97,3 +97,9 @@ This file records all generated and posted content to maintain consistency and a
 - **Post URL**: https://youtu.be/y5ao5ABer3Y
 ---
 
+### 2026-08-30 04:43:30 | youtube | Thương trường & Trả thù quyền lực
+- **Summary**: Thiên Kim Trở Về: Quyền Lực Vô Hình
+- **Themes**: 
+- **Post URL**: https://youtu.be/X8oS5C0bKpg
+---
+
